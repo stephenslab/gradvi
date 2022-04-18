@@ -1,0 +1,80 @@
+# GradVI - Gradient Descent Variational Inference
+
+GradVI provides tools for Bayesian variational inference using gradient descent methods.
+The user specifies a prior and a task 
+(e.g. linear regression, GLM regression, trendfiltering),
+observes data and runs posterior inference.
+The goal is to learn the parameters of the corresponding variational posterior family.
+
+Currently, only adaptive shrinkage (ASH) prior has been implemented.
+A coordinate ascent algorithm for multiple linear regression with ASH prior is available here: 
+[mr.ash.alpha](https://github.com/stephenslab/mr.ash.alpha).
+
+<!-- Future work includes extension to other types of distributions -->
+Theory for GradVI: [Link to Overleaf](https://www.overleaf.com/project/60d0d9301e098e4dbe8e3521)
+
+
+### Installation
+For development, download this repository and install using `pip`:
+```
+git clone https://github.com/banskt/gradvi.git # or use the SSH link
+cd gradvi
+pip install -e .
+```
+
+### How to use
+Functions are not documented yet. Here, I show a few examples to get started:
+
+__Defaults__
+```
+from gradvi.inference import LinearRegression
+gvlin = LinearRegression()
+gvlin.fit(X, y)
+
+from gradvi.inference import Trendfilter
+gvtf = Trendfilter(order = 1)
+gvtf.fit(y)
+
+from gradvi.inference import GLMRegression
+gvglm = GLMRegression(model = "Poisson")
+gvglm.fit(X, y)
+```
+
+__Linear Regression with minimization options and specified prior__
+```
+from gradvi.inference import LinearRegression, Minimizer
+from gradvi.priors import ASH
+
+minimizer = Minimizer(method = 'L-BFGS-B')
+prior = ASH(wk, sk, scaled = True)
+gvlin = LinearRegression(prior = prior, debug = True)
+gvlin.fit(X, y)
+```
+
+<!--
+### Demonstration
+[Link](https://banskt.github.io/iridge-notes/2021/08/24/mrash-penalized-trend-filtering-demo.html) 
+to demonstration on simple examples of linear data and trend-filtering data.
+
+### How to use
+Functions are not documented yet. Here is only a quick start.
+```
+from mrashpen.inference.penalized_regression import PenalizedRegression as PLR
+plr = PLR(method = 'L-BFGS-B', optimize_w = True, optimize_s = True, is_prior_scaled = True, debug = False)
+plr.fit()
+```
+| Returns | Description |
+| --- | --- |
+|`plr.coef` | optimized regression coefficients |
+|`plr.prior` | optimized Mr.ASH prior mixture coefficients |
+|`plr.obj_path` | Value of the objective function for all iterations |
+|`plr.theta` | optimized parameter `theta` from the objective function |
+|`plr.fitobj` | [OptimizeResult](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.OptimizeResult.html#scipy.optimize.OptimizeResult) object from scipy.optimize |
+| --- | --- |
+
+### Running tests
+Run the unittest from the `/path/to/download/mr-ash-pen` directory.
+```
+python -m unittest
+```
+-->
