@@ -1,15 +1,16 @@
+
+"""
+Main command line options to run GradVI
+"""
+
 import numpy as np
 import argparse
 import sys
 import unittest
-import mpi4py
 
 from gradvi.utils.logs import MyLogger
-from gradvi.utils.unittest_tester import UnittestTester
-from gradvi.models.tests.test_normal_means import TestNMAshPy
-from gradvi.models.tests.test_normal_means_scaled import TestNMAshScaledPy
-from gradvi.models.tests.test_plr_objective import TestPLRObjective
 from gradvi.utils import project
+from gradvi.tests.run import run_unittests
 
 mlogger = MyLogger(__name__)
 
@@ -27,14 +28,8 @@ def parse_args():
     return res
 
 
-def run_unittests():
-    for mtest in [TestNMAshScaledPy, 
-                  TestNMAshPy,
-                  TestPLRObjective,
-                 ]:
-        tester = UnittestTester(mtest)
-        tester.execute()
-        del tester
+def do_task(opts):
+    print ("This is not implemented yet.")
     return
 
 
@@ -46,7 +41,7 @@ def main():
     elif opts.version:
         print ("GradVI version {:s}".format(project.version()))
     elif opts.do_lbfgsb:
-        run_lbfgsb(opts)
+        do_task(opts)
 
 if __name__ == "__main__":
     main()

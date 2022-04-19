@@ -1,6 +1,4 @@
-from inspect import issubclass
 
-for attribute_name in dir(module):
-        attribute = getattr(module, attribute_name)
-        if isclass(attribute) and issubclass(attribute, PluginBase):
-            globals()[attribute_name] = attribute
+from .normal_means import NormalMeans
+from .nm_ash import NMAsh
+from .nm_ash_scaled import NMAshScaled

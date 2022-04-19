@@ -10,13 +10,16 @@ import numpy as np
 import functools
 import random
 import logging
+import numbers
 
 from ...utils.logs import MyLogger
 from ...utils.decorators import run_once
 
-class NMAshScaled:
+from . import NormalMeans
 
-    def __init__(self, y, prior, sj2, s2 = 1.0, d = 1.0, debug = False):
+class NMAshScaled(NormalMeans):
+
+    def __init__(self, y, prior, sj2, **kwargs):
         """
         y, d are vectors of length N
         s2 is a single variable
@@ -24,31 +27,52 @@ class NMAshScaled:
         wk are prior mixture proportions and sk are prior mixture variances
         sj2 = s2 / d
         """
+        # set debug options
+        self._is_debug = kwargs['debug'] if 'debug' in kwargs.keys() else False
+        logging_level  = logging.DEBUG if self._is_debug else logging.INFO
+        self.logger    = MyLogger(__name__, level = logging_level)
+
         self._y   = y
         self._wk  = prior.w
         self._sk  = prior.sk
         self._k   = prior.k
         self._sj2 = sj2
         self._n   = y.shape[0]
-        self._s2  = s2
-        self._d   = d
 
+        self._scale = kwargs['scale'] if 'scale' in kwargs.keys() else None
+        self._d     = kwargs['d']     if 'd'     in kwargs.keys() else None
+        if self._scale is None:
+            if self._d is None:
+                self.logger.debug(f"Warning: Scale factor s2 and d are not provided. Trying to guess from sj2.")
+                self._d  = np.ones(self._n)
+                self._scale = self._sj2
+            else:
+                self.logger.debug(f"Warning: Scale factor s2 is not provided. Trying to guess from sj2 and d.")
+                self._scale = self._sj2 * self._d
+
+        # We have either received / guessed a value of s2. Is that correct?
+        # s2 at this point must be a single value or an array with equal values
+        # otherwise it is not possible to use scaled ash
+        if not isinstance(self._scale, numbers.Real):
+            # ok, so it is not a real number, so it must be an array with equal values.
+            if isinstance(self._scale, np.ndarray) and np.all(self._scale == self._scale[0]):
+                self._scale = self._scale[0]
+            else:
+                raise ValueError(f"Could not guess scale factors s2 and d for ash scaled prior from input data.\n \
+                                   Please provide them explicitly using s2 = <float>, d = <ndarray>\n \
+                                   or make sure the variance of the NM model contains all equal values.")
+        
         if self._d is None:
-            self._d = self._s2 / self._sj2
+            self.logger.debug(f"Warning: Scale factor d is not provided. Calculating d from sj2 and s2")
+            self._d = self._scale / self._sj2
 
-        if not isinstance(d, np.ndarray):
-            self._d = np.repeat(d, self._n)
+        if not isinstance(self._d, np.ndarray):
+            self._d = np.repeat(self._d, self._n)
 
-        if self._sj2 is None:
-            self._sj2 = self._s2 / self._d
+        if not isinstance(self._sj2, np.ndarray):
+            self._sj2 = np.repeat(self._sj2, self._n)
 
         self._nonzero_widx = np.where(self._wk != 0)[0]
-
-        # set debug options
-        self._is_debug = debug
-        logging_level  = logging.DEBUG if debug else logging.INFO
-        self.logger    = MyLogger(__name__, level = logging_level)
-
         self.randomseed = random.random()
 
         # Precalculate stuff
@@ -67,9 +91,9 @@ class NMAshScaled:
         This is only used for checking derivatives.
         Adds a small value, eps to s2 for calculating derivatives numerically.
         """
-        self._s2 += eps
-        self._sj2 = self._s2 / self._d
-        #self._s = np.sqrt(self._s2)
+        self._scale += eps
+        self._sj2 = self._scale / self._d
+        #self._s = np.sqrt(self._scale)
         return
         
 
@@ -83,7 +107,7 @@ class NMAshScaled:
         return self._sj2
         #sj2 = self._sj2
         #if sj2 is None:
-        #    sj2 = self._s2 / self._d
+        #    sj2 = self._scale / self._d
         #return sj2
 
 
@@ -136,7 +160,7 @@ class NMAshScaled:
         returns N x K matrix
         """
         #self.logger.debug(f"Calculating logLjk for NM model hash {self.__hash__()}")
-        s2  = self._s2
+        s2  = self._scale
         #sk2 = np.square(self._sk).reshape(1, self._k)
         y2  = np.square(self._y).reshape(self._n, 1)
         #dj  = self._d.reshape(self._n, 1)
@@ -276,7 +300,7 @@ class NMAshScaled:
     @run_once
     def calculate_logML_s2deriv(self):
         y2  = np.square(self._y)
-        s2  = self._s2
+        s2  = self._scale
         # self._logv2 = np.log(sk2 + 1/dj)
         log_numerator1  = self.log_sum_wkLjk(self.logLjk(derive = 1))
         log_numerator2  = self.log_sum_wkLjk(self.logLjk(derive = 1) + self._logv2)
@@ -299,7 +323,7 @@ class NMAshScaled:
     @run_once
     def calculate_logML_deriv_s2deriv(self):
         y2  = np.square(self._y)
-        s2  = self._s2
+        s2  = self._scale
         #dj  = self._d.reshape(self._n, 1)
         #sk2 = np.square(self._sk).reshape(1, self._k)
         #zjk = 0.5 * (3 * sk2 + (3 / dj) - (y2 / s2))
@@ -315,7 +339,7 @@ class NMAshScaled:
 
     def posterior(self):
         self.logger.debug(f"Calculating posterior for NM model.")
-        s2  = self._s2
+        s2  = self._scale
         sk2 = np.square(self._sk).reshape(1, self._k)
         y2  = np.square(self._y).reshape(self._n, 1)
         dj  = self._d.reshape(self._n, 1)

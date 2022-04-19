@@ -1,6 +1,5 @@
 """
-Class for normal means model
-with ASH prior
+Class for normal means model with ASH prior
     p(y | b, s^2) = N(y | b, s^2)
     p(b) = sum_k w_k N(b | 0, s_k^2)
 """
@@ -13,43 +12,38 @@ import logging
 from ...utils.logs import MyLogger
 from ...utils.decorators import run_once
 
-class NMAsh:
+from . import NormalMeans
 
-    def __init__(self, y, s, wk, sk, debug = True):
+class NMAsh(NormalMeans):
+
+    def __init__(self, y, prior, sj2, **kwargs):
         """
-        y, s are vectors of length N
+        y, sj2 are vectors of length N
         wk, sk are vectors fo length K 
         wk are prior mixture proportions and sk are prior mixture variances
         """
         self._y = y
-        self._wk = wk
-        self._sk = sk
-        self._k = wk.shape[0]
-        self._n = y.shape[0]
-        self._s = s
-        if not isinstance(s, np.ndarray):
-            self._s = np.repeat(s, self._n)
-        self._s2 = np.square(self._s)
-        if debug:
-            self.logger = MyLogger(__name__)
-        else:
-            self.logger = MyLogger(__name__, level = logging.INFO)
+        self._wk = prior.w
+        self._sk = prior.sk
+        self._k  = prior.k
+        self._n  = y.shape[0]
+        self._s2 = sj2
+        if not isinstance(self._s2, np.ndarray):
+            self._s2 = np.repeat(self._s2, self._n)
+
+        # set debug options
+        debug = False
+        if 'debug' in kwargs.keys(): debug = kwargs['debug']
+        self._is_debug = debug
+        logging_level  = logging.DEBUG if debug else logging.INFO
+        self.logger    = MyLogger(__name__, level = logging_level)
+
         self.randomseed = random.random()
 
 
     def __hash__(self):
         return hash(self.randomseed)
 
-
-    def set_s2_eps(self, eps):
-        """
-        This is only used for checking derivatives.
-        Adds a small value, eps to s2 for calculating derivatives numerically.
-        """
-        self._s2 += eps
-        self._s = np.sqrt(self._s2)
-        return
-        
 
     @property
     def y(self):

@@ -1,6 +1,4 @@
-"""
-Class decorators
-"""
+
 import functools
 import logging
 

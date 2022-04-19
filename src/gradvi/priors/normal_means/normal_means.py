@@ -1,27 +1,23 @@
 """
-Unified interfaces to Normal Means models corresponding to different priors
+Unified interfaces to Normal Means models.
+This is a factory method which creates the required Normal Means model
+based on the prior, and returns the two main operators we need for GradVI:
+    - Shrinkage Operator :math:`M(x)`
+    - Penalty Operator :math:`\rho_j(x_j)`
+
+References:
+https://medium.com/@vadimpushtaev/python-choosing-subclass-cf5b1b67c696
+https://stackoverflow.com/questions/27322964
+
 """
+
+import numpy as np
 
 class NormalMeans:
 
-    subclasses = {}
-
     @classmethod
-    def register_nm(cls, prior_type):
-        def decorator(subclass):
-            cls.subclasses[prior_type] = subclass
-            return subclass
-        return decorator
-
-    @classmethod
-    def create(cls, prior_type, params):
-        if prior_type not in cls.subclasses:
-            raise ValueError('Bad prior type {}'.format(message_type))
-        return cls.subclasses[message_type](params)
-
-    def __init__(self, y, prior, s2):
-        self.y = y
-        self.yvar = s2
+    def create(self, y, prior, sj2, **kwargs):
+        return prior.normal_means(y, prior, sj2, **kwargs)
 
 
     def shrinkage_operator(self, jac = True):
@@ -36,9 +32,9 @@ class NormalMeans:
             M_wgrad: matrix of size P x K
             M_sgrad: vector of size P
         """
-        M       = self.y + self.yvar * self.logML_deriv
+        M  = self.y + self.yvar * self.logML_deriv
         if jac:
-            M_bgrad  = 1      + self.yvar * self.logML_deriv2
+            M_bgrad  = 1 + self.yvar * self.logML_deriv2
             M_wgrad  = self.yvar.reshape(-1, 1) * self.logML_deriv_wderiv
             M_s2grad = self.logML_deriv + self.yvar * self.logML_deriv_s2deriv
             return M, M_bgrad, M_wgrad, M_s2grad
@@ -51,7 +47,7 @@ class NormalMeans:
         Dimensions:
             lambdaj: vector of size P
             l_bgrad: vector of size P
-            l_wgrad: vector of size K
+            l_wgrad: vector of size P x K
             l_sgrad: vector of size P 
         Note: lambdaj to be summed outside this function for sum_j lambda_j
               l_sgrad to be summed outside this function for sum_j d/ds2 lambda_j
@@ -62,21 +58,14 @@ class NormalMeans:
             l_bgrad = - self.logML_deriv  - self.yvar * self.logML_deriv * self.logML_deriv2
 
             # Gradient with repect to w
-            v2_ld_ldwd = nm.yvar.reshape(-1, 1) * nm.logML_deriv.reshape(-1, 1) * nm.logML_deriv_wderiv
-            l_wgrad = - nm.logML_wderiv - v2_ld_ldwd
-            l_wgrad = np.sum(l_wgrad, axis = 0)
-
-            # Gradient with respect to reparametrized w 
-            # depending upon the choice of prior
-            l_agrad = prior.jacobian(l_wgrad)
+            v2_ld_ldwd = self.yvar.reshape(-1, 1) * self.logML_deriv.reshape(-1, 1) * self.logML_deriv_wderiv
+            l_wgrad = - self.logML_wderiv - v2_ld_ldwd
+            #l_wgrad = np.sum(l_wgrad, axis = 0)
 
             # Gradient with respect to s2
-            v2_ld_lds2d = nm.yvar * nm.logML_deriv * nm.logML_deriv_s2deriv
-            l_s2grad = - (nm.logML_s2deriv + 0.5 * np.square(nm.logML_deriv) + v2_ld_lds2d 
-            #if self._is_prior_scaled:
-            #    l_sgrad = - (nm.logML_s2deriv + v2_ld_lds2d + 0.5 * np.square(nm.logML_deriv) / self._dj)
-            #else:
-            #    #l_sgrad = - (nm.logML_s2deriv - 0.5 * np.square(nm.logML_deriv) - v2_ld_lds2d) / self._dj
-            #    l_sgrad = - (nm.logML_s2deriv + 0.5 * np.square(nm.logML_deriv) + v2_ld_lds2d) / self._dj
+            v2_ld_lds2d = self.yvar * self.logML_deriv * self.logML_deriv_s2deriv
+            l_s2grad = - self.logML_s2deriv - 0.5 * np.square(self.logML_deriv) - v2_ld_lds2d 
+
             return lambdaj, l_bgrad, l_wgrad, l_s2grad
+
         return lambdaj

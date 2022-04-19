@@ -1,3 +1,11 @@
+
+import numpy as np
+import logging
+
+from ..utils.decorators import run_once
+from ..utils.logs import MyLogger
+from ..priors.normal_means import NormalMeans
+
 class LinearModel:
     """
     LinearModel calculates the objective function 
@@ -16,6 +24,7 @@ class LinearModel:
         self._prior = prior
         self._objtype = objtype
         self._dj = self.set_xvar(dj)
+        self._n, self._p = self._X.shape
 
         # set debug options
         self._is_debug = debug
@@ -29,22 +38,34 @@ class LinearModel:
         return dj
 
 
+    def calc_obj_grad(self):
+        if self._objtype == "reparametrize":
+            self.calc_obj_reparametrize()
+        elif self._objtype == "direct":
+            self.calc_obj_direct()
+        return
+
+
     @run_once
-    def calc_obj_jac(self):
+    def calc_obj_reparametrize(self, jac = True):
         """
         Calculates the objective function and gradients for the linear model
         """
-        self.logger.debug(f"Calculating PLR objective with sigma2 = {self._s2}")
+        self.logger.debug(f"Calculating reparametrized Linear Model objective with sigma2 = {self._s2}")
 
         # Initialize the Normal Means model
-        norm_mean = NormalMeans(self._b, self._prior, self._s2 / self._dj, s2 = self._s2, d = self._dj)
+        # variance of the Normal Means
+        sj2 = self._s2 / self._dj
+        nm  = NormalMeans.create(self._b, self._prior, sj2, scale = self._s2, d = self._dj)
 
         # shrinkage operator and penalty operator
         # M(b) and rho(b)
-        Mb, Mb_bgrad, Mb_wgrad, Mb_sj2grad = norm_mean.shrinkage_operator()
-        lj, l_bgrad,  l_wgrad,  l_sj2grad  = norm_mean.penalty_operator()
+        Mb, Mb_bgrad, Mb_wgrad, Mb_sj2grad = nm.shrinkage_operator()
+        lj, l_bgrad,  l_wgrad,  l_sj2grad  = nm.penalty_operator()
 
         # gradients with respect to s2
+        Mb_s2grad = Mb_sj2grad / self._dj
+        l_s2grad  = l_sj2grad  / self._dj
 
         # Objective function
         r = self._y - np.dot(self._X, Mb)
@@ -55,7 +76,7 @@ class LinearModel:
 
         # Gradients
         bgrad  = - (rTX * Mb_bgrad / self._s2) + l_bgrad
-        wgrad  = - np.dot(rTX, Mb_wgrad) / self._s2  + l_wgrad
+        wgrad  = - np.dot(rTX, Mb_wgrad) / self._s2  + np.sum(l_wgrad, axis = 0)
         s2grad = - 0.5 * rTr / (self._s2 * self._s2) \
                  - np.dot(rTX, Mb_s2grad) / self._s2 \
                  + np.sum(l_s2grad) \
@@ -68,16 +89,41 @@ class LinearModel:
         return
 
 
+    @run_once
+    def calc_obj_direct(self):
+        return
+
+
     # =====================================================
     # Attributes
     # =====================================================
     @property
     def objective(self):
+        self.calc_obj_grad()
         return self._objective
 
 
     @property
+    def bgrad(self):
+        self.calc_obj_grad()
+        return self._bgrad
+
+
+    @property
+    def wgrad(self):
+        self.calc_obj_grad()
+        return self._wgrad
+
+
+    @property
+    def s2grad(self):
+        self.calc_obj_grad()
+        return self._s2grad
+
+
+    @property
     def gradients(self):
+        self.calc_obj_grad()
         return self._bgrad, self._wgrad, self._s2grad
 
 
