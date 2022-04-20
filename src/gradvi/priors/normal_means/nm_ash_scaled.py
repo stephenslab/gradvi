@@ -44,8 +44,10 @@ class NMAshScaled(NormalMeans):
         if self._scale is None:
             if self._d is None:
                 self.logger.debug(f"Warning: Scale factor s2 and d are not provided. Trying to guess from sj2.")
-                self._d  = np.ones(self._n)
-                self._scale = self._sj2
+                #self._d  = np.ones(self._n)
+                #self._scale = self._sj2
+                self._scale = 1.0
+                self._d  = 1.0 / self._sj2
             else:
                 self.logger.debug(f"Warning: Scale factor s2 is not provided. Trying to guess from sj2 and d.")
                 self._scale = self._sj2 * self._d

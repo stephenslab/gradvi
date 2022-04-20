@@ -6,6 +6,9 @@ from ..utils.decorators import run_once
 from ..utils.logs import MyLogger
 from ..priors.normal_means import NormalMeans
 
+from . import coordinate_ascent_step as ca_step
+from . import elbo_nmeans as elbo_py
+
 class LinearModel:
     """
     LinearModel calculates the objective function 
@@ -16,20 +19,40 @@ class LinearModel:
     where w are the parameters of the prior.
     """
 
-    def __init__(self, X, y, b, s2, prior, dj = None, objtype = "reparametrize", debug = False):
-        self._X = X
-        self._y = y
-        self._b = b
+    def __init__(self, X, y, b, s2, prior, 
+            dj = None, 
+            objtype = "reparametrize", 
+            v2inv = None,
+            debug = False):
+
+        self._X  = X
+        self._y  = y
+        self._b  = b
         self._s2 = s2
-        self._prior = prior
+        self._prior   = prior
         self._objtype = objtype
-        self._dj = self.set_xvar(dj)
+        self._dj      = self.set_xvar(dj)
+        self._nm_sj2  = self._s2 / self._dj # this is the variance for the normal means model
+
         self._n, self._p = self._X.shape
 
         # set debug options
         self._is_debug = debug
         logging_level  = logging.DEBUG if debug else logging.INFO
         self.logger    = MyLogger(__name__, level = logging_level)
+
+        # required only for ELBO calculation
+        self._v2inv = v2inv
+
+
+    def get_normal_means_model(self):
+        nm  = NormalMeans.create(
+                self._b, 
+                self._prior, 
+                self._nm_sj2, 
+                scale = self._s2, 
+                d = self._dj)
+        return nm
 
 
     def set_xvar(self, dj):
@@ -38,30 +61,46 @@ class LinearModel:
         return dj
 
 
-    def calc_obj_grad(self):
+    def set_coef(self):
         if self._objtype == "reparametrize":
-            self.calc_obj_reparametrize()
+            nm = self.get_normal_means_model()
+            self._coef = nm.shrinkage_operator(jac = False)
         elif self._objtype == "direct":
-            self.calc_obj_direct()
+            self._coef = self._b
+        return
+
+
+    def set_coef_inv(self):
+        if self._objtype == "reparametrize":
+            self._coef_inv = self._b
+        elif self._objtype == "direct":
+            self._coef_inv = self._b
+        return
+
+
+    def solve(self):
+        if self._objtype == "reparametrize":
+            self.solve_reparametrize()
+        elif self._objtype == "direct":
+            self.solve_direct()
         return
 
 
     @run_once
-    def calc_obj_reparametrize(self, jac = True):
+    def solve_reparametrize(self, jac = True):
         """
         Calculates the objective function and gradients for the linear model
         """
-        self.logger.debug(f"Calculating reparametrized Linear Model objective with sigma2 = {self._s2}")
+        self.logger.debug(f"Calculating reparametrized Linear Model objective with {self._prior.prior_type} prior")
+        self.logger.debug(f"Residual variance = {self._s2}")
 
         # Initialize the Normal Means model
-        # variance of the Normal Means
-        sj2 = self._s2 / self._dj
-        nm  = NormalMeans.create(self._b, self._prior, sj2, scale = self._s2, d = self._dj)
+        nm = self.get_normal_means_model()
 
         # shrinkage operator and penalty operator
         # M(b) and rho(b)
-        Mb, Mb_bgrad, Mb_wgrad, Mb_sj2grad = nm.shrinkage_operator()
-        lj, l_bgrad,  l_wgrad,  l_sj2grad  = nm.penalty_operator()
+        Mb, Mb_bgrad, Mb_wgrad, Mb_sj2grad = nm.shrinkage_operator(jac = True)
+        lj, l_bgrad,  l_wgrad,  l_sj2grad  = nm.penalty_operator(jac = True)
 
         # gradients with respect to s2
         Mb_s2grad = Mb_sj2grad / self._dj
@@ -85,13 +124,29 @@ class LinearModel:
         self._objective = obj
         self._bgrad     = bgrad
         self._wgrad     = wgrad
+        self._wmod_grad = self._prior.wmod_grad(wgrad)
         self._s2grad    = s2grad
         return
 
 
     @run_once
-    def calc_obj_direct(self):
+    def solve_direct(self):
         return
+
+
+    def elbo(self, method = "mrash"):
+        sk = self._prior.sk
+        wk = self._prior.w
+        if method == "mrash":
+            x = ca_step.elbo(
+                    self._X, self._y, self.coef, self._s2, sk, wk,
+                    dj = self._dj, s2inv = self._v2inv)
+        elif method == "nmeans":
+            x = elbo_py.ash(
+                    self._X, self._y, self.coef, self._s2, self._prior,
+                    dj = self._dj, phijk = None, mujk = None, varjk = None, 
+                    eps = 1e-8)
+        return x
 
 
     # =====================================================
@@ -99,39 +154,47 @@ class LinearModel:
     # =====================================================
     @property
     def objective(self):
-        self.calc_obj_grad()
+        self.solve()
         return self._objective
 
 
     @property
     def bgrad(self):
-        self.calc_obj_grad()
+        self.solve()
         return self._bgrad
 
 
     @property
     def wgrad(self):
-        self.calc_obj_grad()
+        self.solve()
         return self._wgrad
 
 
     @property
+    def wmod_grad(self):
+        self.solve()
+        return self._wmod_grad
+
+
+    @property
     def s2grad(self):
-        self.calc_obj_grad()
+        self.solve()
         return self._s2grad
 
 
     @property
     def gradients(self):
-        self.calc_obj_grad()
-        return self._bgrad, self._wgrad, self._s2grad
+        self.solve()
+        return self._bgrad, self._wmod_grad, self._s2grad
 
 
     @property
     def coef(self):
+        self.set_coef()
         return self._coef
 
 
     @property
     def coef_inv(self):
-        return self._theta
+        self.set_coef_inv()
+        return self._coef_inv
