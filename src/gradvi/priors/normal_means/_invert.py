@@ -8,53 +8,14 @@ import collections
 from scipy import optimize as sp_optimize
 from scipy import interpolate as sp_interpolate
 
-from ..priors.normal_means import NormalMeans
+from . import NormalMeans
+from . import nm_utils
+
+from ...utils.exceptions import NMInversionError
 
 MINV_FIELDS = ['x', 'xpath', 'objpath', 'success', 'message', 'niter', 'is_diverging']
 class MinvInfo(collections.namedtuple('_MinvInfo', MINV_FIELDS)):
     __slots__ = ()
-
-def _nm_scale_from_kwargs(sj2, **kwargs):
-    s2 = _get_from_kwargs('scale', None, **kwargs)
-    dj = _get_from_kwargs('d', None, **kwargs)
-    if s2 is None:
-        if dj is None:
-            s2 = 1.0
-            dj = 1.0 / sj2
-        else:
-            s2 = sj2 * dj
-    else:
-        if dj is None:
-            dj = s2 / sj2
-    return s2, dj
-
-
-def _get_from_kwargs(key, default, **kwargs):
-    x = kwargs[key] if key in kwargs.keys() else default
-    return x
-
-
-def invert_postmean(b, prior, sj2, **kwargs):
-
-    s2, dj = _nm_scale_from_kwargs(sj2, **kwargs)
-    t0     = _get_from_kwargs('t0', b.copy(), **kwargs)
-    method = _get_from_kwargs('method', None, **kwargs)
-
-    if method is None:
-        method == 'hybr'
-
-    if method == 'newton':
-        res = _invert_newton(b, prior, sj2, s2, dj, t0, **kwargs)
-    elif method == 'hybr':
-        res = _invert_hybr(b, prior, sj2, s2, dj, t0, **kwargs)
-    elif method == 'fssi-linear':
-        res = _invert_fssi(b, prior, sj2, s2, dj, interpolate = 'linear', **kwargs)
-    elif method == 'fssi-cubic':
-        res = _invert_fssi(b, prior, sj2, s2, dj, interpolate = 'cubic', **kwargs)
-
-    return res
-
-
 
 
 def _invert_hybr(b, prior, sj2, s2, dj, t0, **kwargs):
@@ -64,7 +25,7 @@ def _invert_hybr(b, prior, sj2, s2, dj, t0, **kwargs):
         Mz = nm.shrinkage_operator(jac = False)
         return Mz - b
 
-    tol = _get_from_kwargs('tol', 1.48e-8, **kwargs)
+    tol = nm_utils.get_optional_arg('tol', 1.48e-8, **kwargs)
 
     opt = sp_optimize.root(
             inv_func,
@@ -92,8 +53,8 @@ def _invert_newton(b, prior, sj2, s2, dj, t0, **kwargs):
         Mz, zgrad, _, _ = nm.shrinkage_operator(jac = False)
         return Mz - b, zgrad
 
-    tol     = _get_from_kwargs('tol', 1.48e-8, **kwargs)
-    maxiter = _get_from_kwargs('maxiter', 50, **kwargs)
+    tol     = nm_utils.get_optional_arg('tol', 1.48e-8, **kwargs)
+    maxiter = nm_utils.get_optional_arg('maxiter', 50, **kwargs)
 
     x, xpath, objpath, resnorm = \
         rootfind_newton(
@@ -112,7 +73,8 @@ def _invert_newton(b, prior, sj2, s2, dj, t0, **kwargs):
         message = f"The solution converged after {niter} iterations."
     else:
         if niter < maxiter:
-            message = f"Iteration stopped before reaching tolerance!"
+            message = f"Iteration stopped before reaching tolerance."
+            raise NMInversionError('newton', message)
         else:
             if is_decreasing_monotonically(objpath):
                 message = f"The solution is converging, but mean square difference did not reach tolerance.\n \
@@ -120,6 +82,7 @@ def _invert_newton(b, prior, sj2, s2, dj, t0, **kwargs):
             else:
                 is_diverging = True
                 message = f"The solution is diverging. Try different method."
+                raise NMInversionError('newton', message)
     # Result
     res = MinvInfo(x = x,
             xpath = xpath,
@@ -149,7 +112,7 @@ def _invert_fssi(b, prior, sj2, s2, dj, interpolate = 'linear', **kwargs):
         return sp_interpolate.PPoly(c, x)
 
     
-    ngrid = _get_from_kwargs('ngrid', 50, **kwargs)
+    ngrid = nm_utils.get_optional_arg('ngrid', 50, **kwargs)
     #
     # Get M^{-1}(b) for max(b)
     #
@@ -160,7 +123,7 @@ def _invert_fssi(b, prior, sj2, s2, dj, interpolate = 'linear', **kwargs):
     if xmax_opt.success:
         xmax = 1.1 * xmax_opt.x[0]
     else:
-        raise ValueError("Could not get the inverse of a single element")
+        raise NMInversionError(f'fssi-{interpolate}', "Failed to get inverse for the chosen maximum value of posterior")
     #
     # Create a grid
     #
@@ -168,6 +131,9 @@ def _invert_fssi(b, prior, sj2, s2, dj, interpolate = 'linear', **kwargs):
     # 
     nm = NormalMeans.create(xgrid, prior, sj2[0], scale = s2, d = dj[0])
     ygrid, xderiv, _, _ = nm.shrinkage_operator(jac = True)
+
+    if np.any(xderiv == 0):
+        raise NMInversionError(f'fssi-{interpolate}', "Derivative of shrinkage operator is zero for the chosen grid of responses.")
     dgrid = 1 / xderiv
     #xposgrid = np.logspace(-4, np.log10(xmax), ngrid)
     #print (f"Max values of b and M^{-1}(b) are {ymax}, {xmax}")
