@@ -23,11 +23,11 @@ pip install -e .
 ```
 
 ### How to use
-Functions are not documented yet. Here, I show a few examples to get started:
+Functions are not documented yet. Here, I show an example to get started:
 
-__An example of linear regression__
+__Example of Linear regression__
 
-Generate data
+Simulate some data
 ```
 import numpy as np
 from gradvi.priors import Ash

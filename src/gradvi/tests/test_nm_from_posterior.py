@@ -99,58 +99,84 @@ class TestNMFromPosterior(unittest.TestCase):
         return
 
 
+    def operator_provider(self, nm, otype, jac = True):
+        if otype == 'penalty':
+            res = nm.penalty_operator(jac = jac)
+        return res
+
+
     def test_derivatives(self):
         priors = toy_priors.get_all(k = 10, scale = 10., sparsity = 0.3)
+        otype  = 'penalty'
         for prior in priors:
             z, sj2, s2, dj = self.get_nm_data(prior)
             # We are not testing the inversion.
             # Let's assume z is the posterior
             nm = NMFromPost(z, prior, sj2, scale = s2, d = dj, method = 'fssi-cubic', ngrid = 500)
             x, x_bd, x_wd, x_s2d = nm.penalty_operator(jac = True)
+            # =================
+            # Check the penalty operator value
+            # =================
+            info_msg  = f"Checking value of NMFromPost {otype} operator for {prior.prior_type} prior"
+            error_msg = f"NMFromPost {otype} does not match the {otype} from NormalMeans(response) for {prior.prior_type} prior"
+            mlogger.info(info_msg)
+            nm2  = NormalMeans.create(nm.response, prior, sj2, scale = s2, d = dj)
+            lz   = nm2.penalty_operator(jac = False)
+            self.assertTrue(np.allclose(lz, x, atol = 1e-4, rtol = 1e-8), msg = error_msg)
+            # =================
+            # Check the penalty operator derivatives
+            # =================
+            self._b_deriv(z, prior, sj2, s2, dj, x, x_bd, otype)
+            self._w_deriv(z, prior, sj2, s2, dj, x, x_wd, otype)
+            self._s2_deriv(z, prior, sj2, s2, dj, x, x_s2d, otype)
         return
 
 
-    #def _b_deriv(self, prior, x, x_bd, otype, eps = 1e-8):
-    #    info_msg  = f"Checking derivatives of {otype} operator for {prior.prior_type} prior"
-    #    error_msg = f"{otype} operator derivative does not match numeric results for {prior.prior_type} prior"
+    def _b_deriv(self, b, prior, sj2, s2, dj, x, x_bd, otype, eps = 1e-8, method = 'fssi-cubic'):
+        info_msg  = f"Checking derivatives of NMFromPost {otype} operator for {prior.prior_type} prior"
+        error_msg = f"NMFromPost {otype} operator derivative does not match numeric results for {prior.prior_type} prior"
 
-    #    mlogger.info(info_msg)
-    #    nm_eps = NMeans.create(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
-    #    x_eps  = self.operator_provider(nm_eps, otype, jac = False)
-    #    d2 = (x_eps - x) / eps 
-    #    self.assertTrue(np.allclose(x_bd, d2, atol = 1e-6, rtol = 1e-8), msg = error_msg)
-    #    return
-
-
-    #def _w_deriv(self, prior, x, x_wd, otype, eps = 1e-8):
-    #    info_msg  = f"Checking wk derivatives of {otype} operator for {prior.prior_type} prior"
-    #    error_msg = f"{otype} operator wk derivative does not match numeric results for {prior.prior_type} prior"
-
-    #    mlogger.info(info_msg)
-    #    for i in range(prior.k):
-    #        wkeps = prior.w.copy()
-    #        wkeps[i] += eps
-    #        prior_eps = toy_priors.get_from_same_class(prior, wkeps)
-    #        nm_eps    = NMeans.create(self.y, prior_eps, self.sj2, scale = self.scale, d = self.dj)
-    #        x_eps     = self.operator_provider(nm_eps, otype, jac = False)
-    #        d1 = x_wd[:, i]
-    #        d2 = (x_eps - x) / eps
-    #        self.assertTrue(np.allclose(d1, d2, atol = 1e-6, rtol = 1e-8), msg = error_msg)
-    #    return
+        mlogger.info(info_msg)
+        d2 = np.zeros_like(x_bd)
+        for i in range(x_bd.shape[0]):
+            b_eps     = b.copy()
+            b_eps[i] += eps
+            nm_eps    = NMFromPost(b_eps, prior, sj2, scale = s2, d = dj, method = method, ngrid = 500)
+            x_eps     = self.operator_provider(nm_eps, otype, jac = False)
+            d2[i]     = (np.sum(x_eps) - np.sum(x)) / eps
+        self.assertTrue(np.allclose(x_bd, d2, atol = 1e-4, rtol = 1e-8), msg = error_msg)
+        return
 
 
-    #def _s2_deriv(self, prior, x, x_s2d, otype, eps = 1e-8):
-    #    info_msg  = f"Checking s2 derivatives of {otype} operator for {prior.prior_type} prior"
-    #    error_msg = f"{otype} operator s2 derivative does not match numeric results for {prior.prior_type} prior"
+    def _w_deriv(self, b, prior, sj2, s2, dj, x, x_wd, otype, eps = 1e-8, method = 'fssi-cubic'):
+        info_msg  = f"Checking wk derivatives of NMFromPost {otype} operator for {prior.prior_type} prior"
+        error_msg = f"NMFromPost {otype} operator wk derivative does not match numeric results for {prior.prior_type} prior"
 
-    #    mlogger.info(info_msg)
-    #    sj2_eps = (self.scale + eps) / self.dj
-    #    nm_eps = NMeans.create(self.y, prior, sj2_eps, scale = self.scale + eps, d = self.dj)
-    #    x_eps  = self.operator_provider(nm_eps, otype, jac = False)
-    #    d1 = x_s2d / self.dj
-    #    d2 = (x_eps - x) / eps
-    #    self.assertTrue(np.allclose(d1, d2, atol = 1e-6, rtol = 1e-8), msg = error_msg)
-    #    return
+        mlogger.info(info_msg)
+        for i in range(prior.k):
+            wkeps     = prior.w.copy()
+            wkeps[i] += eps
+            prior_eps = toy_priors.get_from_same_class(prior, wkeps)
+            nm_eps    = NMFromPost(b, prior_eps, sj2, scale = s2, d = dj, method = method, ngrid = 500)
+            x_eps     = self.operator_provider(nm_eps, otype, jac = False)
+            d1 = x_wd[:, i]
+            d2 = (x_eps - x) / eps
+            self.assertTrue(np.allclose(d1, d2, atol = 1e-4, rtol = 1e-8), msg = error_msg)
+        return
+
+
+    def _s2_deriv(self, b, prior, sj2, s2, dj, x, x_s2d, otype, eps = 1e-8, method = 'fssi-cubic'):
+        info_msg  = f"Checking s2 derivatives of NMFromPost {otype} operator for {prior.prior_type} prior"
+        error_msg = f"NMFromPost {otype} operator s2 derivative does not match numeric results for {prior.prior_type} prior"
+
+        mlogger.info(info_msg)
+        sj2_eps = (s2 + eps) / dj
+        nm_eps  = NMFromPost(b, prior, sj2_eps, scale = s2 + eps, d = dj, method = method, ngrid = 500)
+        x_eps   = self.operator_provider(nm_eps, otype, jac = False)
+        d1 = x_s2d / dj
+        d2 = (x_eps - x) / eps
+        self.assertTrue(np.allclose(d1, d2, atol = 1e-6, rtol = 1e-8), msg = error_msg)
+        return
 
 
 
