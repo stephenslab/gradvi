@@ -359,3 +359,8 @@ class NMAshScaled(NormalMeans):
         phijk /= np.sum(phijk, axis = 1).reshape(self._n, 1)
         #phijk[:, self._nonzero_widx] = np.exp(zjk - self.log_sum_wkLjk(logLjk).reshape(-1,1))
         return phijk, mujk, varjk
+
+    @property
+    def analytical_posterior_mean(self):
+        phijk, mujk, varjk = self.posterior()
+        return np.sum(phijk * mujk, axis = 1)

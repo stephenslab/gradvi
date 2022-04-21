@@ -89,9 +89,16 @@ class NormalMeansFromPosterior:
                         )
             if self._binvobj is not None:
                 self.logger.debug(f"{self._binvobj.message}")
-        except NMInversionError:
-            self.logger.error(f"Failed to invert the posterior mean for Normal Means model")
-            raise
+        except NMInversionError as err:
+            self.logger.error(f"Failed to invert the posterior mean for Normal Means model with {self._method}")
+            if err.is_diverging:
+                self.logger.error(f"!!!=== OVERRIDING USER CHOICE ===!!!")
+                self.logger.error(f"Using Powell's method for inverting posterior mean.")
+                self._method = 'hybr'
+                self.invert_postmean()
+                pass
+            else:
+                raise
         except BaseException as err:
             self.logger.error(f"Unexpected {err=}, {type(err)=}")
             raise
@@ -101,7 +108,7 @@ class NormalMeansFromPosterior:
     def get_nm_model(self, z):
         nm = NormalMeans.create(
                 z, self._prior, self._sj2,
-                scale = self._s2, d = self._dj)
+                scale = self._scale, d = self._d)
         return nm
 
 
@@ -118,8 +125,8 @@ class NormalMeansFromPosterior:
             l_wgrad = - nm.logML_wderiv
 
             # Gradient with respect to s2
-            # Not implemented yet
-            return lambdaj, l_bgrad, l_wgrad
+            l_s2grad = -nm.logML_s2deriv + 0.5 * np.square(nm.logML_deriv)
+            return lambdaj, l_bgrad, l_wgrad, l_s2grad
         return lambdaj
 
 

@@ -295,6 +295,12 @@ class NMAsh(NormalMeans):
 
 
     @property
+    def analytical_posterior_mean(self):
+        phijk, mujk, varjk = self.posterior()
+        return np.sum(phijk * mujk, axis = 1)
+
+
+    @property
     def logML(self):
         self.calculate_logML()
         return self._logML

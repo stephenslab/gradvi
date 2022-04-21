@@ -25,6 +25,37 @@ pip install -e .
 ### How to use
 Functions are not documented yet. Here, I show a few examples to get started:
 
+__An example of linear regression__
+
+Generate data
+```
+import numpy as np
+from gradvi.priors import Ash
+from gradvi.inference import  LinearRegression
+
+n = 100
+p = 200
+pcausal = 20
+s2 = 1.4
+np.random.seed(100)
+
+X = np.random.normal(0, 1, size = n * p).reshape(n, p)
+b = np.zeros(p)
+b[:pcausal] = np.random.normal(0, 1, size = pcausal)
+err = np.random.normal(0, np.sqrt(s2), size = n)
+y = np.dot(X, b) + err
+```
+
+Perform regression
+```
+prior = Ash(sk, scaled = True)
+gvlin = LinearRegression(debug = False, display_progress = False)
+gvlin.fit(X, y, prior)
+
+b_hat = gvlin.coef
+```
+
+<!--
 __Defaults__
 ```
 from gradvi.inference import LinearRegression
@@ -50,6 +81,7 @@ prior = ASH(wk, sk, scaled = True)
 gvlin = LinearRegression(prior = prior, debug = True)
 gvlin.fit(X, y)
 ```
+-->
 
 <!--
 ### Demonstration

@@ -50,7 +50,7 @@ def _invert_newton(b, prior, sj2, s2, dj, t0, **kwargs):
     
     def inv_func(z, b, prior, sj2, s2, dj):
         nm = NormalMeans.create(z, prior, sj2, scale = s2, d = dj)
-        Mz, zgrad, _, _ = nm.shrinkage_operator(jac = False)
+        Mz, zgrad, _, _ = nm.shrinkage_operator(jac = True)
         return Mz - b, zgrad
 
     tol     = nm_utils.get_optional_arg('tol', 1.48e-8, **kwargs)
@@ -81,8 +81,8 @@ def _invert_newton(b, prior, sj2, s2, dj, t0, **kwargs):
                     Try increasing the number of iterations."
             else:
                 is_diverging = True
-                message = f"The solution is diverging. Try different method."
-                raise NMInversionError('newton', message)
+                message = f"The solution is diverging. Try different method for inverting."
+                raise NMInversionError('newton', message, is_diverging = True)
     # Result
     res = MinvInfo(x = x,
             xpath = xpath,

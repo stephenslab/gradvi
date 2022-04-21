@@ -5,7 +5,7 @@ Toy priors for testing
 import numpy as np
 from gradvi.priors import Ash
 
-def get_all(k = 6):
+def get_all(k = 6, sparsity = 0.6, scale = 2.0):
     """
     Get a list of priors for testing
     """
@@ -16,10 +16,10 @@ def get_all(k = 6):
     #
     # Ash
     wk = np.zeros(k)
-    wk[0] = 0.6
+    wk[0] = sparsity
     wk[1:(k-1)] = np.repeat((1 - wk[0])/(k-1), (k - 2))
     wk[k-1] = 1 - np.sum(wk)
-    sk = (np.power(2.0, np.arange(k) / k) - 1)
+    sk = (np.power(scale, np.arange(k) / k) - 1)
     prior = Ash(sk, wk = wk, scaled = False)
     priors.append(prior)
     #

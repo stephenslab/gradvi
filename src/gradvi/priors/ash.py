@@ -76,3 +76,44 @@ class Ash(Prior):
         w[1:(k-1)] = np.repeat((1 - w[0])/(k-1), (k - 2))
         w[k-1] = 1 - np.sum(w)
         return w
+
+
+    def sample(self, size, scale = None, seed = None):
+        if seed is not None:
+            np.random.seed(seed)
+        runif = np.random.uniform(0, 1, size = size)
+
+        # Get index of mixture component for all elements.
+        # gcomp[j] is the mixture component from which
+        # the j-th element should be sampled.
+        #
+        # Example
+        # >>> x = np.array([0.2, 6.4, 3.0, 1.6])
+        # >>> bins = np.array([1.0, 2.5, 4.0, 10.0])
+        # >>> inds = np.digitize(x, bins)
+        # >>> inds
+        # array([0, 3, 2, 1])
+        # >>> wk = np.array([0.8, 0.1, 0.1])
+        # >>> np.cumsum(wk)
+        # array([0.8, 0.9, 1. ])
+        # >>> runif = np.random.uniform(0, 1, size = 100)
+        # >>> np.digitize(runif, np.cumsum(wk))
+        # array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 2, 0, 0,
+        #        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2,
+        #        0, 0, 1, 0, 0, 0, 0, 2, 1, 0, 0, 0, 2, 0, 1, 0, 0, 1, 1, 0, 0, 0,
+        #        2, 0, 2, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0,
+        #        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        gcomp = np.digitize(runif, np.cumsum(self.w))
+
+        # Scaled and unscaled prior
+        sk = self.sk.copy()
+        if self.is_scaled and scale is not None:
+            sk *= np.sqrt(scale)
+
+        # Sample each element from its corresponding 
+        # mixture components
+        x = np.zeros(size)
+        for i, gc in enumerate(gcomp):
+            if sk[gc] > 0:
+                x[i] = np.random.normal(0, sk[gc])
+        return x
