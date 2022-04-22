@@ -13,9 +13,9 @@ from . import NormalMeans
 from . import nm_utils
 from ._invert import _invert_hybr, _invert_newton, _invert_fssi
 
-from ...utils.exceptions import NMInversionError
-from ...utils.logs import MyLogger
-from ...utils.decorators import run_once
+from ..utils.exceptions import NMInversionError
+from ..utils.logs import MyLogger
+from ..utils.decorators import run_once
 
 class NormalMeansFromPosterior:
 

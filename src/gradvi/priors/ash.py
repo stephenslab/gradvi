@@ -2,7 +2,7 @@
 import numpy as np
 
 from . import Prior
-from .normal_means import NMAsh, NMAshScaled
+from ..normal_means import NMAsh, NMAshScaled
 
 class Ash(Prior):
 

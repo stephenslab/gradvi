@@ -8,9 +8,9 @@ import argparse
 import sys
 import unittest
 
-from gradvi.utils.logs import MyLogger
-from gradvi.utils import project
-from gradvi.tests.run import run_unittests
+from .utils.logs import MyLogger
+from .utils import project
+from .tests.run import run_unittests
 
 mlogger = MyLogger(__name__)
 

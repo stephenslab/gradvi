@@ -74,8 +74,8 @@ class LinearRegression(GradVIBase):
         equal to `tol`. For detailed control, use solver-specific
         `options`.
 
-    inversion_method : str, default = 'newton'
-        Type of inversion method to use for inversion of the 
+    invert_method : str, default = 'newton'
+        Type of method to use for inverting the 
         Posterior Means Operator. Should be one of
             
             - 'newton'
@@ -83,8 +83,8 @@ class LinearRegression(GradVIBase):
             - 'fssi-cubic'
             - 'hybr'
 
-    inversion_options : dict
-        A dict of options for inversion of the Posterior Means Operator.
+    invert_options : dict
+        A dict of options for inverting the Posterior Means Operator.
         Accepts the following generic options:
 
             tol : float
@@ -119,7 +119,7 @@ class LinearRegression(GradVIBase):
     def __init__(
         self, method = 'L-BFGS-B', obj = 'reparametrize',
         fit_intercept = True, options = None, 
-        inversion_method = 'hybr', inversion_options = None,
+        invert_method = 'hybr', invert_options = None,
         maxiter = 2000, display_progress = True, tol = 1e-9,
         get_elbo = False, function_call_py = True, lbfgsb_call_py = True,
         optimize_b = True, optimize_s = True, optimize_w = True,
@@ -157,11 +157,13 @@ class LinearRegression(GradVIBase):
         self.logger    = MyLogger(__name__, level = logging_level)
 
         # set options for inversion of the Posterior Means Operator
-        self._inversion_method = inversion_method.lower()
-        if inversion_options is None:
-            self._inversion_options  = {'maxiter': maxiter,
-                                        'tol': tol,
-                                        'ngrid': None}
+        self._invert_method = invert_method.lower()
+        self._invert_options = invert_options
+        if self._invert_options is None:
+            self._invert_options = {
+                'maxiter': maxiter,
+                'tol': tol,
+                'ngrid': 500}
         return
 
 
@@ -249,6 +251,7 @@ class LinearRegression(GradVIBase):
         k    = self._prior.k
 
         ## Precompute v2inv for ELBO calculation when using ash prior
+        self._v2inv = None
         if self._is_elbo_calc:
             sk = self._prior.sk
             self._v2inv = np.zeros((p, k))
@@ -286,10 +289,11 @@ class LinearRegression(GradVIBase):
         b, wk, s2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
         self._prior.update_wmod(wk)
         self._niter = plr_min.nit
+        model = self.get_new_model(b, s2, self._prior)
 
         res = OptimizeResult(
-                b_post = self.get_coef(b, s2, self._prior),
-                b_inv  = self.get_coef_inv(b, s2, self._prior),
+                b_post = model.coef,
+                b_inv  = model.coef_inv,
                 residual_var = s2,
                 prior = self._prior,
                 success = plr_min.success,
@@ -337,14 +341,20 @@ class LinearRegression(GradVIBase):
             if t_init is not None:
                 if s2_init is None: var_init   = np.var(self._y - np.dot(self._X, t_init))
                 theta_init = t_init.copy()
-                if self._objtype != "reparametrize":
-                    coef_init  = shrinkage_operator(t_init)
+                if self._objtype == "direct":
+                    nm = NormalMeans.create(
+                            t_init, self._prior, s2_init / self._dj,
+                            scale = s2_init, d = self._dj)
+                    coef_init = nm.shrinkage_operator(jac = False)
         else:
             if s2_init is None: var_init   = np.var(self._y - np.dot(self._X, b_init))
             if self._objtype == "reparametrize":
                 # Get inverse if using parametrized objective
-                #theta_init = shrinkage_operator_inverse(b_init, t_init)
-                theta_init = b_init.copy()
+                nm = NormalMeansFromPosterior(
+                        b_init, self._prior, s2_init / self._dj,
+                        scale = s2_init, d = self._dj, 
+                        method = "hybr")
+                theta_init = nm.response
             coef_init  = b_init.copy()
 
         # Return correct values
@@ -359,19 +369,11 @@ class LinearRegression(GradVIBase):
                     dj = self._dj,
                     objtype = self._objtype,
                     v2inv = v2inv,
-                    debug = self._is_debug)
+                    debug = self._is_debug,
+                    invert_method = self._invert_method,
+                    invert_options = self._invert_options
+                    )
         return model
-
-
-
-    def get_coef(self, b, s2, prior):
-        model = self.get_new_model(b, s2, prior)
-        return model.coef
-
-
-    def get_coef_inv(self, b, s2, prior):
-        model = self.get_new_model(b, s2, prior)
-        return model.coef_inv
 
 
     def get_elbo(self, b, s2, prior):

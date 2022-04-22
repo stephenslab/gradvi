@@ -12,8 +12,8 @@ import random
 import logging
 import numbers
 
-from ...utils.logs import MyLogger
-from ...utils.decorators import run_once
+from ..utils.logs import MyLogger
+from ..utils.decorators import run_once
 
 from . import NormalMeans
 

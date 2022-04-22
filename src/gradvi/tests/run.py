@@ -5,16 +5,24 @@ from gradvi.tests import TestNormalMeansPy, \
                          TestLinearModel, \
                          TestNMOperator, \
                          TestOldPLRAsh, \
-                         TestNMFromPosterior
+                         TestNMFromPosterior, \
+                         TestLinearRegression
 
 def run_unittests():
-    for mtest in [TestNormalMeansPy, 
-                  TestNMOperator,
-                  TestLinearModel,
-                  TestOldPLRAsh,
-                  TestNMFromPosterior
-                 ]:  
-        tester = UnittestTester(mtest)
-        tester.execute()
-        del tester
+    test_classes = [
+            TestNMOperator,
+            TestLinearModel,
+            TestOldPLRAsh,
+            TestNMFromPosterior,
+            TestLinearRegression,
+            ]
+    tester = UnittestTester(test_classes)
+    tester.execute()
+    del tester
+    # =========================
+    # if you want report for each class separately,
+    # =========================
+    #for mtest in test_classes:
+    #    tester = UnittestTester(mtest)
+    #    del tester
     return

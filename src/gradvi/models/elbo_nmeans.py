@@ -3,7 +3,7 @@ Use the Normal Means model to calculate ELBO
 """
 
 import numpy as np
-from ..priors.normal_means import NormalMeans
+from ..normal_means import NormalMeans
 
 def ash(X, y, b, sigma2, prior, dj = None, phijk = None, mujk = None, varjk = None, eps = 1e-8):
     n, p    = X.shape

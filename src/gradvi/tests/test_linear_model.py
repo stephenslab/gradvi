@@ -2,40 +2,19 @@
 import unittest
 import numpy as np
 
-from gradvi.models.linear_model import LinearModel
+from gradvi.models import LinearModel
 from gradvi.utils import unittest_tester as tester
 from gradvi.utils.logs import MyLogger
 from gradvi.tests import toy_priors
+from gradvi.tests import toy_data
 
 mlogger = MyLogger(__name__)
 
 class TestLinearModel(unittest.TestCase):
 
-    def get_lm_data(self, n = 100, p = 200, p_causal = 50, pve = 0.5, rho = 0.4):
-
-        def sd2_from_pve (X, b, pve):
-            return np.var(np.dot(X, b)) * (1 - pve) / pve
-
-        np.random.seed(100)
-
-        """
-        Equicorr predictors
-        X is sampled from a multivariate normal, with covariance matrix V.
-        V has unit diagonal entries and constant off-diagonal entries rho.
-        """
-        iidX    = np.random.normal(size = n * p).reshape(n, p)
-        comR    = np.random.normal(size = n).reshape(n, 1)
-        X       = comR * np.sqrt(rho) + iidX * np.sqrt(1 - rho)
-        bidx    = np.random.choice(p, p_causal, replace = False)
-        b       = np.zeros(p)
-        b[bidx] = np.random.normal(size = p_causal)
-        s2      = sd2_from_pve(X, b, pve)
-        y       = np.dot(X, b) + np.sqrt(s2) * np.random.normal(size = n)
-        return X, y, b, s2
-
 
     def test_linear_model(self):
-        self.X, self.y, self.b, self.s2 = self.get_lm_data()
+        self.X, self.y, self.b, self.s2 = toy_data.get_linear_model()
         priors = toy_priors.get_all()
         for objtype in ["reparametrize"]:
             for prior in priors:

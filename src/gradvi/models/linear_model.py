@@ -4,7 +4,8 @@ import logging
 
 from ..utils.decorators import run_once
 from ..utils.logs import MyLogger
-from ..priors.normal_means import NormalMeans
+from ..normal_means import NormalMeans
+from ..normal_means import NormalMeansFromPosterior
 
 from . import coordinate_ascent_step as ca_step
 from . import elbo_nmeans as elbo_py
@@ -23,7 +24,10 @@ class LinearModel:
             dj = None, 
             objtype = "reparametrize", 
             v2inv = None,
-            debug = False):
+            debug = False,
+            invert_method = "hybr",
+            invert_options = {}
+            ):
 
         self._X  = X
         self._y  = y
@@ -44,6 +48,10 @@ class LinearModel:
         # required only for ELBO calculation
         self._v2inv = v2inv
 
+        # required for direct objtype
+        self._invert_method = invert_method
+        self._invert_opts   = invert_options
+
 
     def get_normal_means_model(self):
         nm  = NormalMeans.create(
@@ -52,6 +60,20 @@ class LinearModel:
                 self._nm_sj2, 
                 scale = self._s2, 
                 d = self._dj)
+        return nm
+
+
+
+    def get_normal_means_model_from_posterior(self):
+        nm  = NormalMeansFromPosterior(
+                self._b, 
+                self._prior, 
+                self._nm_sj2, 
+                scale = self._s2, 
+                d = self._dj,
+                method = self._invert_method,
+                **self._invert_opts
+                )
         return nm
 
 
@@ -74,7 +96,8 @@ class LinearModel:
         if self._objtype == "reparametrize":
             self._coef_inv = self._b
         elif self._objtype == "direct":
-            self._coef_inv = self._b
+            nm = self.get_normal_means_model_from_posterior()
+            self._coef_inv = nm.response
         return
 
 
@@ -89,7 +112,8 @@ class LinearModel:
     @run_once
     def solve_reparametrize(self, jac = True):
         """
-        Calculates the objective function and gradients for the linear model
+        Calculates the function and gradients for the linear model
+        using the 'reparametrize' objective function.
         """
         self.logger.debug(f"Calculating reparametrized Linear Model objective with {self._prior.prior_type} prior")
         self.logger.debug(f"Residual variance = {self._s2}")
@@ -131,6 +155,41 @@ class LinearModel:
 
     @run_once
     def solve_direct(self):
+        """
+        Calculates the function and gradients for the linear model
+        using the 'direct' objective function.
+        """
+        self.logger.debug(f"Calculating Linear Model objective with {self._prior.prior_type} prior")
+        self.logger.debug(f"Residual variance = {self._s2}")
+
+        # Initialize the Normal Means model
+        nm = self.get_normal_means_model_from_posterior()
+
+        # Penalty operator rho(b)
+        lj, l_bgrad,  l_wgrad,  l_sj2grad  = nm.penalty_operator(jac = True)
+
+        # gradients with respect to s2
+        l_s2grad  = l_sj2grad  / self._dj
+
+        # Objective function
+        r = self._y - np.dot(self._X, self._b)
+        rTr  = np.sum(np.square(r))
+        rTX  = np.dot(r.T, self._X)
+        obj  = (0.5 * rTr / self._s2) + np.sum(lj)
+        obj += 0.5 * (self._n - self._p) * np.log(2 * np.pi * self._s2)
+
+        # Gradients
+        bgrad  = - (rTX / self._s2) + l_bgrad
+        wgrad  = np.sum(l_wgrad, axis = 0)
+        s2grad = - 0.5 * rTr / (self._s2 * self._s2) \
+                 + np.sum(l_s2grad) \
+                 + 0.5 * (self._n - self._p) / self._s2
+
+        self._objective = obj
+        self._bgrad     = bgrad
+        self._wgrad     = wgrad
+        self._wmod_grad = self._prior.wmod_grad(wgrad)
+        self._s2grad    = s2grad
         return
 
 

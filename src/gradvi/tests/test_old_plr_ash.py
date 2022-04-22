@@ -3,8 +3,8 @@ import numpy as np
 import pickle
 import os
 
-from gradvi.models.linear_model import LinearModel
-from gradvi.priors.normal_means import NormalMeans
+from gradvi.models import LinearModel
+from gradvi.normal_means import NormalMeans
 from gradvi.priors import Ash
 
 from gradvi.utils import unittest_tester as tester

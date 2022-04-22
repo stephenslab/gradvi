@@ -18,11 +18,12 @@ test_expectations
 import unittest
 import numpy as np
 
-from gradvi.priors.normal_means import NormalMeans
-from gradvi.priors.normal_means import NormalMeansFromPosterior as NMFromPost
+from gradvi.normal_means import NormalMeans
+from gradvi.normal_means import NormalMeansFromPosterior as NMFromPost
 from gradvi.utils.logs import MyLogger
 from gradvi.utils import unittest_tester as tester
 from gradvi.tests import toy_priors
+from gradvi.tests import toy_data
 
 mlogger = MyLogger(__name__)
 
@@ -36,25 +37,6 @@ INVERT_METHODS = [
 class TestNMFromPosterior(unittest.TestCase):
 
 
-    def sample_normal_means(self, mean, var):
-        p = mean.shape[0]
-        if not isinstance(var, np.ndarray):
-            var = np.repeat(var, p)
-        y = np.random.multivariate_normal(mean, np.diag(var))
-        return y
-
-
-    def get_nm_data(self, prior, p = 500):
-        np.random.seed(100)
-        s2  = 1.2**2
-        #dj = np.square(np.random.normal(1, 0.5, size = n)) * n
-        dj  = np.ones(p) * p
-        b   = prior.sample(p, seed = 200, scale = s2)
-        sj2 = s2 / dj
-        z   = self.sample_normal_means(b, sj2)
-        return z, sj2, s2, dj
-
-
     def test_inversion(self):
         # =======
         # Tolerances
@@ -63,9 +45,9 @@ class TestNMFromPosterior(unittest.TestCase):
         for k in INVERT_METHODS:
             if k.startswith('fssi'): atol[k] = 1e-4
 
-        priors = toy_priors.get_all(k = 10, scale = 10., sparsity = 0.3)
+        priors = toy_priors.get_all(k = 10, skbase = 10., sparsity = 0.3)
         for prior in priors:
-            z, sj2, s2, dj = self.get_nm_data(prior)
+            z, sj2, s2, dj = toy_data.get_normal_means(prior)
             # =================
             # the Normal Means model with z as response
             # =================
@@ -106,10 +88,10 @@ class TestNMFromPosterior(unittest.TestCase):
 
 
     def test_derivatives(self):
-        priors = toy_priors.get_all(k = 10, scale = 10., sparsity = 0.3)
+        priors = toy_priors.get_all(k = 10, skbase = 10., sparsity = 0.3)
         otype  = 'penalty'
         for prior in priors:
-            z, sj2, s2, dj = self.get_nm_data(prior)
+            z, sj2, s2, dj = toy_data.get_normal_means(prior)
             # We are not testing the inversion.
             # Let's assume z is the posterior
             nm = NMFromPost(z, prior, sj2, scale = s2, d = dj, method = 'fssi-cubic', ngrid = 500)

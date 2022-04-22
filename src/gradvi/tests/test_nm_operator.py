@@ -2,7 +2,7 @@
 import unittest
 import numpy as np
 
-from gradvi.priors.normal_means import NormalMeans as NMeans
+from gradvi.normal_means import NormalMeans as NMeans
 from gradvi.utils.logs import MyLogger
 from gradvi.utils import unittest_tester as tester
 from gradvi.tests import toy_priors

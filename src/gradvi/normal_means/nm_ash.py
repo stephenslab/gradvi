@@ -9,8 +9,8 @@ import functools
 import random
 import logging
 
-from ...utils.logs import MyLogger
-from ...utils.decorators import run_once
+from ..utils.logs import MyLogger
+from ..utils.decorators import run_once
 
 from . import NormalMeans
 

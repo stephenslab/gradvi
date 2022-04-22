@@ -11,7 +11,7 @@ from scipy import interpolate as sp_interpolate
 from . import NormalMeans
 from . import nm_utils
 
-from ...utils.exceptions import NMInversionError
+from ..utils.exceptions import NMInversionError
 
 MINV_FIELDS = ['x', 'xpath', 'objpath', 'success', 'message', 'niter', 'is_diverging']
 class MinvInfo(collections.namedtuple('_MinvInfo', MINV_FIELDS)):
@@ -112,7 +112,7 @@ def _invert_fssi(b, prior, sj2, s2, dj, interpolate = 'linear', **kwargs):
         return sp_interpolate.PPoly(c, x)
 
     
-    ngrid = nm_utils.get_optional_arg('ngrid', 50, **kwargs)
+    ngrid = nm_utils.get_optional_arg('ngrid', 500, **kwargs)
     #
     # Get M^{-1}(b) for max(b)
     #
@@ -122,6 +122,8 @@ def _invert_fssi(b, prior, sj2, s2, dj, interpolate = 'linear', **kwargs):
     xmax_opt = _invert_hybr(ymax, prior, sj2[imax], s2, dj[imax], np.zeros(1))
     if xmax_opt.success:
         xmax = 1.1 * xmax_opt.x[0]
+        if xmax == 0:
+            xmax = 10
     else:
         raise NMInversionError(f'fssi-{interpolate}', "Failed to get inverse for the chosen maximum value of posterior")
     #
