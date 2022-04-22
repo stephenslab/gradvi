@@ -2,7 +2,7 @@
 import unittest
 import numpy as np
 
-from gradvi.normal_means import NormalMeans as NMeans
+from gradvi.normal_means import NormalMeans as NormalMeans
 from gradvi.utils.logs import MyLogger
 from gradvi.utils import unittest_tester as tester
 from gradvi.tests import toy_priors
@@ -37,7 +37,7 @@ class TestNMOperator(unittest.TestCase):
         priors = toy_priors.get_all()
         for otype in ['shrinkage', 'penalty']:
             for prior in priors:
-                nm = NMeans.create(self.y, prior, self.sj2, scale = self.scale, d = self.dj)
+                nm = NormalMeans.create(self.y, prior, self.sj2, scale = self.scale, d = self.dj)
                 x, x_bd, x_wd, x_s2d = self.operator_provider(nm, otype, jac = True)
                 self._b_deriv(prior,  x, x_bd,  otype)
                 self._w_deriv(prior,  x, x_wd,  otype)
@@ -45,45 +45,46 @@ class TestNMOperator(unittest.TestCase):
 
 
     def _b_deriv(self, prior, x, x_bd, otype, eps = 1e-8):
-        info_msg  = f"Checking derivatives of {otype} operator for {prior.prior_type} prior"
-        error_msg = f"{otype} operator derivative does not match numeric results for {prior.prior_type} prior"
+        info_msg = f"df/db numerical differentiation for NormalMeans {otype} operator, {prior.prior_type} prior"
+        err_msg  = f"df/db not equal to numerical differentiation, for NormalMeans {otype} operator, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
-        nm_eps = NMeans.create(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
+        nm_eps = NormalMeans.create(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
         x_eps  = self.operator_provider(nm_eps, otype, jac = False)
         d2 = (x_eps - x) / eps
-        self.assertTrue(np.allclose(x_bd, d2, atol = 1e-6, rtol = 1e-8), msg = error_msg)
+        np.testing.assert_allclose(x_bd, d2, atol = 1e-6, rtol = 1e-8, err_msg = err_msg)
         return
 
 
     def _w_deriv(self, prior, x, x_wd, otype, eps = 1e-8):
-        info_msg  = f"Checking wk derivatives of {otype} operator for {prior.prior_type} prior"
-        error_msg = f"{otype} operator wk derivative does not match numeric results for {prior.prior_type} prior"
+        info_msg = f"df/dw numerical differentiation for NormalMeans {otype} operator, {prior.prior_type} prior"
+        err_msg  = f"df/dw not equal to numerical differentiation, for NormalMeans {otype} operator, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
         for i in range(prior.k):
             wkeps = prior.w.copy()
             wkeps[i] += eps
             prior_eps = toy_priors.get_from_same_class(prior, wkeps)
-            nm_eps    = NMeans.create(self.y, prior_eps, self.sj2, scale = self.scale, d = self.dj)
+            nm_eps    = NormalMeans.create(self.y, prior_eps, self.sj2, scale = self.scale, d = self.dj)
             x_eps     = self.operator_provider(nm_eps, otype, jac = False)
             d1 = x_wd[:, i]
             d2 = (x_eps - x) / eps
-            self.assertTrue(np.allclose(d1, d2, atol = 1e-6, rtol = 1e-8), msg = error_msg)
+            np.testing.assert_allclose(d1, d2, atol = 1e-6, rtol = 1e-8, err_msg = err_msg)
         return
 
 
     def _s2_deriv(self, prior, x, x_s2d, otype, eps = 1e-8):
-        info_msg  = f"Checking s2 derivatives of {otype} operator for {prior.prior_type} prior"
-        error_msg = f"{otype} operator s2 derivative does not match numeric results for {prior.prior_type} prior"
+        info_msg = f"df/dw numerical differentiation for NormalMeans {otype} operator, {prior.prior_type} prior"
+        err_msg  = f"df/db not equal to numerical differentiation, for NormalMeans {otype} operator, {prior.prior_type} prior"
+
 
         mlogger.info(info_msg)
         sj2_eps = (self.scale + eps) / self.dj
-        nm_eps = NMeans.create(self.y, prior, sj2_eps, scale = self.scale + eps, d = self.dj)
+        nm_eps = NormalMeans.create(self.y, prior, sj2_eps, scale = self.scale + eps, d = self.dj)
         x_eps  = self.operator_provider(nm_eps, otype, jac = False)
         d1 = x_s2d / self.dj
         d2 = (x_eps - x) / eps
-        self.assertTrue(np.allclose(d1, d2, atol = 1e-6, rtol = 1e-8), msg = error_msg)
+        np.testing.assert_allclose(d1, d2, atol = 1e-6, rtol = 1e-8, err_msg = err_msg)
         return
 
 

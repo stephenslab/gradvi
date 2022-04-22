@@ -1,5 +1,4 @@
 
-
 """
 Test NormalMeansFromPosterior
 test_method_comparsion
@@ -8,11 +7,6 @@ test_method_comparsion
 test_fssi_homogeneous_variance
     FSSI throws error if NM variance are unequal.
 
-test_expectations
-    Results should match some of our expectations:
-        .. M(x) = b where x is obtained after inverting b
-        .. For a NM model z ~ N(a, sj2), calculate posterior mean.
-            Then, invert of the posterior mean equals z.
 """
 
 import unittest
@@ -58,9 +52,9 @@ class TestNMFromPosterior(unittest.TestCase):
                     # =================
                     # Debug messages
                     # =================
-                    info_msg = f"Checking inversion of posterior mean, {prior.prior_type} prior, {method} method"
-                    err_msg_z = f"Inverted posterior mean does not match response, {prior.prior_type} prior, {method} method"
-                    err_msg_b = f"Posterior mean of inverse b does not match b, {prior.prior_type} prior, {method} method"
+                    info_msg  = f"Invert NM posterior mean operator M, {prior.prior_type} prior, {method} method"
+                    err_msg_z = f"Response not equal to M^{1}(b), {prior.prior_type} prior, {method} method"
+                    err_msg_b = f"M(M^{1}(b)) not equal to b, {prior.prior_type} prior, {method} method"
                     mlogger.info(info_msg)
                     # =================
                     # Invert
@@ -76,8 +70,8 @@ class TestNMFromPosterior(unittest.TestCase):
                     # =================
                     #print ("z", np.max(np.abs(z - znew)))
                     #print ("b", np.max(np.abs(b - bnew)))
-                    self.assertTrue(np.allclose(z, znew, atol = atol[method], rtol = 1e-8), msg = err_msg_z)
-                    self.assertTrue(np.allclose(b, bnew, atol = atol[method], rtol = 1e-8), msg = err_msg_b)
+                    np.testing.assert_allclose(z, znew, atol = atol[method], rtol = 1e-8, err_msg = err_msg_z)
+                    np.testing.assert_allclose(b, bnew, atol = atol[method], rtol = 1e-8, err_msg = err_msg_b)
         return
 
 
@@ -99,12 +93,12 @@ class TestNMFromPosterior(unittest.TestCase):
             # =================
             # Check the penalty operator value
             # =================
-            info_msg  = f"Checking value of NMFromPost {otype} operator for {prior.prior_type} prior"
-            error_msg = f"NMFromPost {otype} does not match the {otype} from NormalMeans(response) for {prior.prior_type} prior"
+            info_msg  = f"f(b) should be equal to f(M(z)), NMFromPost {otype} operator, {prior.prior_type} prior"
+            err_msg   = f"f(b) not equal to f(M(z)), NMFromPost {otype} operator, {prior.prior_type} prior"
             mlogger.info(info_msg)
             nm2  = NormalMeans.create(nm.response, prior, sj2, scale = s2, d = dj)
             lz   = nm2.penalty_operator(jac = False)
-            self.assertTrue(np.allclose(lz, x, atol = 1e-4, rtol = 1e-8), msg = error_msg)
+            np.testing.assert_allclose(lz, x, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)
             # =================
             # Check the penalty operator derivatives
             # =================
@@ -115,8 +109,8 @@ class TestNMFromPosterior(unittest.TestCase):
 
 
     def _b_deriv(self, b, prior, sj2, s2, dj, x, x_bd, otype, eps = 1e-8, method = 'fssi-cubic'):
-        info_msg  = f"Checking derivatives of NMFromPost {otype} operator for {prior.prior_type} prior"
-        error_msg = f"NMFromPost {otype} operator derivative does not match numeric results for {prior.prior_type} prior"
+        info_msg  = f"df/db numerical differentiation, NMFromPost {otype} operator, {prior.prior_type} prior"
+        err_msg = f"df/db not equal to numerical differentiation, NMFromPost {otype} operator, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
         d2 = np.zeros_like(x_bd)
@@ -126,13 +120,13 @@ class TestNMFromPosterior(unittest.TestCase):
             nm_eps    = NMFromPost(b_eps, prior, sj2, scale = s2, d = dj, method = method, ngrid = 500)
             x_eps     = self.operator_provider(nm_eps, otype, jac = False)
             d2[i]     = (np.sum(x_eps) - np.sum(x)) / eps
-        self.assertTrue(np.allclose(x_bd, d2, atol = 1e-4, rtol = 1e-8), msg = error_msg)
+        np.testing.assert_allclose(x_bd, d2, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)
         return
 
 
     def _w_deriv(self, b, prior, sj2, s2, dj, x, x_wd, otype, eps = 1e-8, method = 'fssi-cubic'):
-        info_msg  = f"Checking wk derivatives of NMFromPost {otype} operator for {prior.prior_type} prior"
-        error_msg = f"NMFromPost {otype} operator wk derivative does not match numeric results for {prior.prior_type} prior"
+        info_msg  = f"df/dw numerical differentiation, NMFromPost {otype} operator, {prior.prior_type} prior"
+        err_msg = f"df/dw not equal to numerical differentiation, NMFromPost {otype} operator, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
         for i in range(prior.k):
@@ -143,13 +137,13 @@ class TestNMFromPosterior(unittest.TestCase):
             x_eps     = self.operator_provider(nm_eps, otype, jac = False)
             d1 = x_wd[:, i]
             d2 = (x_eps - x) / eps
-            self.assertTrue(np.allclose(d1, d2, atol = 1e-4, rtol = 1e-8), msg = error_msg)
+            np.testing.assert_allclose(d1, d2, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)
         return
 
 
     def _s2_deriv(self, b, prior, sj2, s2, dj, x, x_s2d, otype, eps = 1e-8, method = 'fssi-cubic'):
-        info_msg  = f"Checking s2 derivatives of NMFromPost {otype} operator for {prior.prior_type} prior"
-        error_msg = f"NMFromPost {otype} operator s2 derivative does not match numeric results for {prior.prior_type} prior"
+        info_msg  = f"df/ds2 numerical differentiation, NMFromPost {otype} operator, {prior.prior_type} prior"
+        err_msg = f"df/ds2 not equal to numerical differentiation, NMFromPost {otype} operator, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
         sj2_eps = (s2 + eps) / dj
@@ -157,7 +151,7 @@ class TestNMFromPosterior(unittest.TestCase):
         x_eps   = self.operator_provider(nm_eps, otype, jac = False)
         d1 = x_s2d / dj
         d2 = (x_eps - x) / eps
-        self.assertTrue(np.allclose(d1, d2, atol = 1e-6, rtol = 1e-8), msg = error_msg)
+        np.testing.assert_allclose(d1, d2, atol = 1e-6, rtol = 1e-8, err_msg = err_msg)
         return
 
 

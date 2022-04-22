@@ -57,7 +57,7 @@ class TestOldPLRAsh(unittest.TestCase):
             # =========================
             # Normal Means Model
             # =========================
-            mlogger.info (f"Comparing normal means model with old version using {prior.prior_type} prior")
+            mlogger.info (f"Normal Means model for {prior.prior_type} prior should match mrashpen results")
             nm = NormalMeans.create(b, prior, sj2, scale = s2, d = dj)
             mb, mb_bgrad, mb_wgrad, mb_s2grad = nm.shrinkage_operator()
             lj, lj_bgrad, lj_wgrad, lj_s2grad = nm.penalty_operator()
@@ -87,7 +87,7 @@ class TestOldPLRAsh(unittest.TestCase):
             # =========================
             # Linear Model
             # =========================
-            mlogger.info (f"Comparing linear model objective with old version using {prior.prior_type} prior")
+            mlogger.info (f"Reparametrized objective function for linear model with {prior.prior_type} prior should match mrashpen results")
             lm = LinearModel(X, y, b, s2, prior, objtype = "reparametrize")
             res = {
                 'objective': lm.objective,
@@ -107,11 +107,11 @@ class TestOldPLRAsh(unittest.TestCase):
     def compare_dict(self, x1, x2):
         for key, val in x1.items():
             if key in x2.keys():
-                info_msg = f"Comparing {key}"
-                error_msg = f"{key} did not match"
+                info_msg = f"{key}"
+                err_msg = f"{key} did not match mrashpen results"
                 mlogger.info(info_msg)
                 oldval = x2[key]
-                self.assertTrue(np.allclose(val, oldval, atol = 1e-8, rtol = 1e-8), msg = error_msg)
+                np.testing.assert_allclose(val, oldval, atol = 1e-8, rtol = 1e-8, err_msg = err_msg)
         return
 
 

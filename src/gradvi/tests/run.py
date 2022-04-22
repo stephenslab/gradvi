@@ -10,6 +10,7 @@ from gradvi.tests import TestNormalMeansPy, \
 
 def run_unittests():
     test_classes = [
+            TestNormalMeansPy,
             TestNMOperator,
             TestLinearModel,
             TestOldPLRAsh,

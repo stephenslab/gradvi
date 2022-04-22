@@ -14,9 +14,11 @@ class TestLinearModel(unittest.TestCase):
 
 
     def test_linear_model(self):
-        self.X, self.y, self.b, self.s2 = toy_data.get_linear_model()
+        self.X, self.y, self.b, self.s2 = \
+            toy_data.get_linear_model(
+                n = 20, p = 50)
         priors = toy_priors.get_all()
-        for objtype in ["reparametrize"]:
+        for objtype in ["reparametrize", "direct"]:
             for prior in priors:
                 lm = LinearModel(self.X, self.y, self.b, self.s2, prior, objtype = objtype)
                 self._h_bderiv(lm, prior)
@@ -25,8 +27,8 @@ class TestLinearModel(unittest.TestCase):
 
 
     def _h_bderiv(self, lm, prior, eps = 1e-8):
-        info_msg  = f"Linear Model. Checking dh/db for {lm._objtype} objective, {prior.prior_type} prior"
-        error_msg = f"Derivative of linear model objective with respect to b does not match for {lm._objtype} objective, {prior.prior_type} prior"
+        info_msg = f"dh/db numerical differentiation for {lm._objtype} objective of linear model, {prior.prior_type} prior"
+        err_msg  = f"dh/db is not equal to numerical differentiation for {lm._objtype} objective of linear model, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
         for i in range(self.b.shape[0]):
@@ -35,13 +37,13 @@ class TestLinearModel(unittest.TestCase):
             lm_eps = LinearModel(self.X, self.y, b_eps, self.s2, prior, objtype = lm._objtype)
             d1 = lm.bgrad[i]
             d2 = (lm_eps.objective - lm.objective) / eps
-            self.assertTrue(np.allclose(d1, d2, atol = 1e-5, rtol = 1e-8), msg = error_msg)
+            np.testing.assert_allclose(d1, d2, atol = 1e-5, rtol = 1e-8, err_msg = err_msg)
         return
 
 
     def _h_aderiv(self, lm, prior, eps = 1e-3):
-        info_msg  = f"Linear Model. Checking dh/da for {lm._objtype} objective, {prior.prior_type} prior"
-        error_msg = f"Derivative of linear model objective with respect to w does not match for {lm._objtype} objective, {prior.prior_type} prior"
+        info_msg = f"dh/da numerical differentiation for {lm._objtype} objective of linear model, {prior.prior_type} prior"
+        err_msg  = f"dh/da is not equal to numerical differentiation for {lm._objtype} objective of linear model, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
         d1 = prior.wmod_grad(lm.wgrad)
@@ -53,19 +55,19 @@ class TestLinearModel(unittest.TestCase):
             prior_eps.update_wmod(amod_eps)
             lm_eps       = LinearModel(self.X, self.y, self.b, self.s2, prior_eps, objtype = lm._objtype)
             d2[i]        = (lm_eps.objective - lm.objective) / eps
-        self.assertTrue(np.allclose(d1, d2, atol = 0.1, rtol = 1e-8), msg = error_msg)
+        np.testing.assert_allclose(d1, d2, atol = 0.1, rtol = 1e-8, err_msg = err_msg)
         return
 
 
     def _h_s2deriv(self, lm, prior, eps = 1e-8):
-        info_msg  = f"Linear Model. Checking dh/ds2 for {lm._objtype} objective, {prior.prior_type} prior"
-        error_msg = f"Derivative of linear model objective with respect to s2 does not match for {lm._objtype} objective, {prior.prior_type} prior"
+        info_msg = f"dh/ds2 numerical diffentiation for {lm._objtype} objective of linear model, {prior.prior_type} prior"
+        err_msg  = f"dh/da is not equal to numerical differentiation for {lm._objtype} objective of linear model, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
         lm_eps = LinearModel(self.X, self.y, self.b, self.s2 + eps, prior, objtype = lm._objtype)
         d1 = lm.s2grad
         d2 = (lm_eps.objective - lm.objective) / eps
-        self.assertTrue(np.allclose(d1, d2, atol = 1e-4, rtol = 1e-8), msg = error_msg)
+        np.testing.assert_allclose(d1, d2, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)
         return
 
 
