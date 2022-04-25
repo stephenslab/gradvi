@@ -18,6 +18,59 @@ class LinearModel:
         b ~ g(w)
     given the data {X, y, b} and the prior distribution family g(w),
     where w are the parameters of the prior.
+
+    Parameters
+    ----------
+    X : array of shape (n_samples, n_features)
+        Training data (explanatory variables)
+
+    y : array of shape (n_samples,)
+        Target values (response variables). 
+
+    b : array of shape(n_features,)
+        For objtype == "direct", these are the coefficients for the
+        regression problem y ~ Normal(Xb, s2).
+        For objtype == "reparametrize", these are the 
+        'unshrinked-coefficients', such that y ~ Normal(XM(b), s2).
+        That is, the coefficients are obtained by applying shrinkage
+        operator M on this vector.
+
+    s2 : float
+        Residual variance of the linear model.
+
+    prior : gradvi.priors object
+        Prior distribution g(w).
+
+    dj : array of shape (n_features,)
+        Precalculated norm of each column of X, that is sum_i(X_ij^2).
+
+    objtype : str
+        The type of objective to use for the linear model.
+        Can be "reparametrize" or "direct.
+
+    invert_method : str, default = 'hybr'
+        Type of method to use for inverting the 
+        Posterior Means Operator. Should be one of
+            
+            - 'newton'
+            - 'fssi-linear'
+            - 'fssi-cubic'
+            - 'hybr'
+
+    invert_options : dict
+        A dict of options for inverting the Posterior Means Operator.
+        Accepts the following generic options:
+
+            tol : float
+                Tolerance for termination.
+            maxiter : int
+                Maximum number of iterations to be performed.
+            ngrid : int
+                Number of grids for method `fssi`
+
+    v2inv : array of shape (n_features, n_prior)
+        Precalculated term for estimating ELBO when using Ash prior.
+
     """
 
     def __init__(self, X, y, b, s2, prior, 

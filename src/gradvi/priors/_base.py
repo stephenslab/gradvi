@@ -1,16 +1,28 @@
+"""
+Base methods for any Prior
+"""
+
+import copy
+
+
 class Prior:
 
     def __init__(self, w):
         """
         Each prior class must initiate the following
         """
-        # Initial value of the parameters
-        self.w_init = w
         # Parameters of the prior
         self.w = w
         # Reparametrized parameters of the prior
         self.wmod = w
+        # Initial value of the parameters
+        self.w_init = w
+        self.wmod_init = w
         return
+
+
+    def copy(self):
+        return Prior(copy.deepcopy(self.w))
 
 
     def update_wmod(self, wnew):

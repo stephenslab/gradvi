@@ -7,8 +7,9 @@ import numpy as np
 from scipy import optimize as sp_optimize
 import logging
 
-from ..models.linear_model import LinearModel
-from ..utils.logs    import MyLogger
+from ..models import LinearModel
+from ..normal_means import NormalMeans, NormalMeansFromPosterior
+from ..utils.logs   import MyLogger
 #from . import coordinate_descent_step as cd_step
 #from . import elbo as elbo_py
 
@@ -159,11 +160,7 @@ class LinearRegression(GradVIBase):
         # set options for inversion of the Posterior Means Operator
         self._invert_method = invert_method.lower()
         self._invert_options = invert_options
-        if self._invert_options is None:
-            self._invert_options = {
-                'maxiter': maxiter,
-                'tol': tol,
-                'ngrid': 500}
+        if self._invert_options is None: self._invert_options = {}
         return
 
 
@@ -206,11 +203,11 @@ class LinearRegression(GradVIBase):
         self._intercept = np.mean(y) if self._is_intercept else 0
         self._y         = y - self._intercept
         self._dj        = np.sum(np.square(self._X), axis = 0)
-        self._prior     = prior
+        self._prior     = prior.copy() # do not update the original prior
 
         # Initialization
         b, s2 = self.initialize_params(b_init, t_init, s2_init)
-        w = self._prior.w_init
+        w = self._prior.wmod_init
         self._init_params = tuple([b, w, s2]) # immutable
         
         # Solver depending on the specified options:
@@ -342,16 +339,18 @@ class LinearRegression(GradVIBase):
                 if s2_init is None: var_init   = np.var(self._y - np.dot(self._X, t_init))
                 theta_init = t_init.copy()
                 if self._objtype == "direct":
-                    nm = NormalMeans.create(
-                            t_init, self._prior, s2_init / self._dj,
+                    #lm = self.get_new_model(t_init, s2_init, self._prior)
+                    nm = NormalMeans(
+                            t_init, self._prior, var_init / self._dj,
                             scale = s2_init, d = self._dj)
                     coef_init = nm.shrinkage_operator(jac = False)
+                    #coef_init = lm.coef
         else:
             if s2_init is None: var_init   = np.var(self._y - np.dot(self._X, b_init))
             if self._objtype == "reparametrize":
                 # Get inverse if using parametrized objective
                 nm = NormalMeansFromPosterior(
-                        b_init, self._prior, s2_init / self._dj,
+                        b_init, self._prior, var_init / self._dj,
                         scale = s2_init, d = self._dj, 
                         method = "hybr")
                 theta_init = nm.response

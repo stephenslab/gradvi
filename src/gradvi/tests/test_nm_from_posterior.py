@@ -23,6 +23,7 @@ mlogger = MyLogger(__name__)
 
 INVERT_METHODS = [
     'hybr',
+    'trisection',
     'newton',
     'fssi-linear',
     'fssi-cubic'
@@ -35,9 +36,11 @@ class TestNMFromPosterior(unittest.TestCase):
         # =======
         # Tolerances
         # =======
-        atol = {k : 1e-8 for k in INVERT_METHODS}
+        atol = {k : 1e-6 for k in INVERT_METHODS}
         for k in INVERT_METHODS:
             if k.startswith('fssi'): atol[k] = 1e-4
+            if k.startswith('trisection'): atol[k] = 0.1
+
 
         priors = toy_priors.get_all(k = 10, skbase = 10., sparsity = 0.3)
         for prior in priors:
@@ -59,7 +62,7 @@ class TestNMFromPosterior(unittest.TestCase):
                     # =================
                     # Invert
                     # =================
-                    znew = NMFromPost(b, prior, sj2, scale = s2, d = dj, method = method, ngrid = 500).response
+                    znew = NMFromPost(b, prior, sj2, scale = s2, d = dj, method = method).response
                     # =================
                     # the Normal Means model with znew as response
                     # =================
@@ -70,8 +73,12 @@ class TestNMFromPosterior(unittest.TestCase):
                     # =================
                     #print ("z", np.max(np.abs(z - znew)))
                     #print ("b", np.max(np.abs(b - bnew)))
-                    np.testing.assert_allclose(z, znew, atol = atol[method], rtol = 1e-8, err_msg = err_msg_z)
-                    np.testing.assert_allclose(b, bnew, atol = atol[method], rtol = 1e-8, err_msg = err_msg_b)
+                    if not method == 'trisection':
+                        np.testing.assert_allclose(z, znew, atol = atol[method], rtol = 1e-8, err_msg = err_msg_z)
+                        np.testing.assert_allclose(b, bnew, atol = atol[method], rtol = 1e-8, err_msg = err_msg_b)
+                    else:
+                        zero = np.square(b - bnew) / b.shape[0]
+                        np.testing.assert_allclose(zero, 0.0, atol = atol[method], rtol = 1e-8, err_msg = err_msg_b)
         return
 
 

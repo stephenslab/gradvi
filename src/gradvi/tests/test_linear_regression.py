@@ -14,7 +14,7 @@ class TestLinearRegression(unittest.TestCase):
 
 
     def test_both_equal(self):
-        x, y, b, s2 = toy_data.get_linear_model(standardize = True)
+        x, y, b, s2 = toy_data.get_linear_model(pve = 0.75, standardize = True)
         prior = toy_priors.get_ash_scaled(k = 10, sparsity = None)
         # ================
         # Reparametrized objective
@@ -37,16 +37,16 @@ class TestLinearRegression(unittest.TestCase):
         # ================
         # Coefficients are equal 
         # ================
-        info_msg  = f"Linear regression coefficients using reparametrized and direct objectives should be equal"
-        error_msg = f"Linear regression coefficients using reparametrized and direct objectives are different, {prior.prior_type} prior"
+        info_msg = f"Linear regression coefficients using reparametrized and direct objectives should be equal"
+        err_msg  = f"Linear regression coefficients using reparametrized and direct objectives are different, {prior.prior_type} prior"
         mlogger.info(info_msg)
-        self.assertTrue(np.allclose(gv1.coef, gv2.coef, atol = 0.1, rtol = 1e-8), msg = error_msg)
+        np.testing.assert_allclose(gv1.coef, gv2.coef, atol = 0.1, rtol = 1e-8, err_msg = err_msg)
         
         # ================
         # ELBO
         # ================
-        info_msg  = f"At the optimum, the objective function should be equal to -ELBO"
-        error_msg = f"At the optimum, the objective function is not equal to -ELBO, {prior.prior_type} prior"
+        info_msg = f"At the optimum, the objective function should be equal to -ELBO"
+        err_msg  = f"At the optimum, the objective function is not equal to -ELBO, {prior.prior_type} prior"
         mlogger.info(info_msg)
         dj = np.sum(np.square(x), axis = 0)
         hmin = gv2.fun
@@ -54,7 +54,7 @@ class TestLinearRegression(unittest.TestCase):
         elbo  = gv2.get_elbo(gv2.coef, gv2.residual_var, gv2.prior)
         #mlogger.info(f"Objective function: {-hmin}")
         #mlogger.info(f"ELBOs: {elbo}")
-        self.assertAlmostEqual(hmin, elbo, places = 5, msg = error_msg)
+        np.testing.assert_almost_equal(hmin, elbo, decimal = 5, err_msg = err_msg)
         return
 
 

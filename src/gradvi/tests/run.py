@@ -6,7 +6,8 @@ from gradvi.tests import TestNormalMeansPy, \
                          TestNMOperator, \
                          TestOldPLRAsh, \
                          TestNMFromPosterior, \
-                         TestLinearRegression
+                         TestLinearRegression, \
+                         TestRootFind
 
 def run_unittests():
     test_classes = [
@@ -16,6 +17,7 @@ def run_unittests():
             TestOldPLRAsh,
             TestNMFromPosterior,
             TestLinearRegression,
+            TestRootFind
             ]
     tester = UnittestTester(test_classes)
     tester.execute()

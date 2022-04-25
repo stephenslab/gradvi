@@ -49,7 +49,7 @@ def sample_normal_means(mean, var):
     return y
 
 
-def get_normal_means(prior, n = 500, s2 = 1.44, dj = None):
+def get_normal_means(prior, n = 100, s2 = 1.44, dj = None):
     np.random.seed(100)
     #dj = np.square(np.random.normal(1, 0.5, size = n)) * n
     if dj is None:

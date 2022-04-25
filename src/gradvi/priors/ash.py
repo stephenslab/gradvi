@@ -1,8 +1,10 @@
 
 import numpy as np
+import copy
 
 from . import Prior
-from ..normal_means import NMAsh, NMAshScaled
+from ..normal_means.nm_ash import NMAsh
+from ..normal_means.nm_ash_scaled import NMAshScaled
 
 class Ash(Prior):
 
@@ -18,8 +20,11 @@ class Ash(Prior):
         self.sk = sk
         if wk is None: 
             wk = self.initialize(sk.shape[0], sparsity)
+        # Update self.w and self.wmod
         self.update_w(wk)
-        self.w_init = self.wmod.copy()
+        # Keep the initial values in memory
+        self.w_init = self.w.copy()
+        self.wmod_init = self.wmod.copy()
         self.is_scaled = scaled
         # ================================
         # Normal Means model depends on the choice of prior.
@@ -29,6 +34,16 @@ class Ash(Prior):
         else:
             self.normal_means = NMAsh
         return
+
+
+    def copy(self):
+        newcopy = Ash(
+            copy.deepcopy(self.sk),
+            wk = copy.deepcopy(self.w),
+            smbase = copy.deepcopy(self.smbase),
+            scaled = copy.deepcopy(self.is_scaled)
+            )
+        return newcopy
 
 
     def update_wmod(self, wnew):
