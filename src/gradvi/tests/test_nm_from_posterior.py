@@ -38,8 +38,9 @@ class TestNMFromPosterior(unittest.TestCase):
         # =======
         atol = {k : 1e-6 for k in INVERT_METHODS}
         for k in INVERT_METHODS:
-            if k.startswith('fssi'): atol[k] = 1e-4
-            if k.startswith('trisection'): atol[k] = 0.1
+            if k == 'fssi-linear': atol[k] = 1e-2
+            if k == 'fssi-cubic':  atol[k] = 1e-4
+            if k == 'trisection':  atol[k] = 1e-1
 
 
         priors = toy_priors.get_all(k = 10, skbase = 10., sparsity = 0.3)

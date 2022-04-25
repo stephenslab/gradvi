@@ -8,23 +8,23 @@ yield the penalty operator and its derivatives.
 """
 import numpy as np
 import logging
+import numbers
 
 from . import nm_utils
 from ..optimize.root_find import vec_root
+from ..optimize.bracket import bracket_postmean
 from ..utils.exceptions import NormalMeansInversionError
 from ..utils.logs import MyLogger
 from ..utils.decorators import run_once
-
-def NormalMeans(y, prior, sj2, **kwargs):
-    return prior.normal_means(y, prior, sj2, **kwargs)
+from . import NormalMeans
 
 
 class NormalMeansFromPosterior:
 
     def __init__(self, b, prior, sj2, **kwargs):
         self._b     = b # the posterior mean
-        self._prior = prior 
-        self._sj2   = sj2
+        self._prior = prior # could be any prior class 
+        self._sj2   = sj2 # variance of the normal means model (for linear model, sj2 = scale / d)
 
         # Get optional parameters from kwargs
         d                    = nm_utils.get_optional_arg('d', None, **kwargs)
@@ -39,56 +39,60 @@ class NormalMeansFromPosterior:
         logging_level  = logging.DEBUG if self._is_debug else logging.INFO
         self.logger    = MyLogger(__name__, level = logging_level)
 
+        # Homogeneous and heterogeneous variance of Normal Means model
+        self._is_homogeneous = self._check_homogeneous()
+        if self._is_homogeneous:
+            self._sj2   = _get_number_or_first_array_element(self._sj2)
+            self._scale = _get_number_or_first_array_element(self._scale)
+            self._d     = _get_number_or_first_array_element(self._d)
+
         # Method cannot be None
         if self._method is None:
-            self._method = 'trisection'
+            if self._is_homogeneous:
+                self._method = 'fssi-cubic'
+            else:
+                self._method = 'trisection'
 
+        # Cannot use FSSI for non-homogeneous Normal Means
+        if self._method in ['fssi-cubic', 'fssi-linear'] and not self._is_homogeneous:
+            raise ValueError(f"Invertion method cannot handle heterogeneous variance of Normal Means model.")
+            
         # Drop the optional arguments which have been processed
         self._kwargs = {
                 k : v for (k, v) in kwargs.items() 
                     if k not in ['d', 'scale', 't0', 'method', 'bracket'] }
-        # We always want full output here
+        # We always want full output for root finding
+        # Force replace.
         self._kwargs['full_output'] = True
 
         # Internal variable to store the inversion object
         self._binvobj = None
 
+        # Keep a count of number of Normal Means calls
+        self._nmcalls = 0
+
         return
 
 
     def get_nm_model(self, z):
-        nm = NormalMeans(
+        nm = NormalMeans.create(
                 z, self._prior, self._sj2,
                 scale = self._scale, d = self._d)
+        self._nmcalls += 1
         return nm
 
 
-    def _rootfind_zero_func(self, x):
-        nm = self.get_nm_model(x)
-        fx = nm.shrinkage_operator(jac = False)
-        return fx - self._b
-
-
-    def _rootfind_zero_func_jac(self, x):
-        nm = self.get_nm_model(x)
-        fx, df, _, _ = nm.shrinkage_operator(jac = True)
-        return fx - self._b, df
-
-
-    def _rootfind_invert_func_jac(self, x):
-
-        sj2 = np.repeat(self._sj2[0], self._sj2.shape[0])
-        if not np.allclose(sj2, self._sj2):
-            raise ValueError(f"Invertion method cannot handle heterogeneous variance of Normal Means model.")
-        dj  = np.repeat(self._d[0], self._d.shape[0])
-        if not np.allclose(dj, self._d):
-            raise ValueError(f"Invertion method cannot handle heterogenous norm of input matrix.")
-
-        sj2 = self._sj2[0]
-        dj  = self._d[0]
-        nm = NormalMeans(x, self._prior, sj2, scale = self._scale, d = dj)
-        fx, df, _, _ = nm.shrinkage_operator(jac = True)
-        return fx, df
+    def validate_brackets(self):
+        is_correct = False
+        if self._bracket is not None:
+            xlo, xup = self._bracket
+            fxlo = self._f_zero(xlo, self._b)
+            fxup = self._f_zero(xup, self._b)
+            is_correct = np.all(fxlo * fxup < 0)
+        if not is_correct:
+            xlo, xup, nfev = bracket_postmean(self._f_zero, self._b)
+            self._bracket = [xlo, xup]
+        return
 
 
     def invert_postmean(self):
@@ -97,54 +101,50 @@ class NormalMeansFromPosterior:
             kwargs = self._kwargs
             x0 = self._z0.copy()
 
-            self.logger.debug(f"Inverting using method {method}")
+            self.logger.debug(f"Invert using {method} method")
 
             if method == 'newton':
                 self._binvobj = vec_root(
-                        self._rootfind_zero_func_jac, x0,
-                        method = method, jac = True,
-                        options = self._kwargs)
+                        self._f_jac_zero, x0, args = (self._b,),
+                        method = method, jac = True, options = self._kwargs)
 
             elif method == 'hybr':
                 self._binvobj = vec_root(
-                        self._rootfind_zero_func, x0,
-                        method = method, 
-                        options = self._kwargs)
+                        self._f_zero, x0, args = (self._b,), 
+                        method = method, options = self._kwargs)
 
             elif method == 'trisection':
-                if self._bracket is None:
-                    bup = self._b + 10.633 * self._b
-                    blo = self._b - 10.633 * self._b
-                    self._bracket = [blo, bup]
+                self.validate_brackets()
                 self._binvobj = vec_root(
-                        self._rootfind_zero_func, x0,
-                        method = method,
-                        bracket = self._bracket,
+                        self._f_zero, x0, args = (self._b,),
+                        method = method, bracket = self._bracket,
                         options = self._kwargs)
 
             elif method in ['fssi-linear', 'fssi-cubic']:
                 options = self._kwargs
                 options.setdefault('grid_scale', 'log')
 
-                # Find the upper bound
-                bmax = np.max(np.abs(self._b))
-                func = lambda x: self._rootfind_invert_func_jac(x)[0] - bmax
-                #bracket = [np.atleast_1d(bmax + 1.6 * bmax), np.atleast_1d(bmax - 1.6 * bmax)]
-                #xup  = vec_root(func, np.atleast_1d(x0[0]), method = 'trisection', bracket = bracket, 
-                #        options = {'full_output': False})
-                xup = vec_root(func, np.atleast_1d(x0[0]), method = 'hybr')
+                # We will only use the positive values of b,
+                # as M(x) is symmetric around zero.
+                bpos = np.abs(self._b)
 
-                bounds = [1e-4, max(1, 1.633 * xup[0])]
+                # Find the bounds
+                ybounds        = np.array([np.min(bpos), np.max(bpos)])
+                xlo, xup, nfev = bracket_postmean(self._f_zero, ybounds)
+                xbounds        = [xlo[0], xup[1]]
+                if xbounds[0] <= 0: xbounds[0] = 1e-8
+                if xbounds[1] == 0: xbounds[1] = 10.0
                 # 
                 self._binvobj = vec_root(
-                        self._rootfind_invert_func_jac, x0,
-                        method = method, fx = np.abs(self._b),
-                        bounds = bounds, 
-                        options = options)
+                        self._f_jac_inv, x0, method = method, fx = bpos,
+                        bounds = xbounds, options = options)
+
+                # And set the signs correctly
                 self._binvobj.x = self._binvobj.x * np.sign(self._b)
 
             if self._binvobj is not None:
                 self.logger.debug(f"{self._binvobj.message}")
+
             else:
                 raise NormalMeansInversionError(f"Returned NoneType object when inverting posterior mean using {method} method")
 
@@ -185,8 +185,82 @@ class NormalMeansFromPosterior:
         return lambdaj
 
 
+    # =====================================================
+    # Functions for root finding
+    # =====================================================
+
+    def _f_zero(self, x, b):
+        nm = self.get_nm_model(x)
+        fx = nm.shrinkage_operator(jac = False)
+        return fx - b
+
+
+    def _f_jac_zero(self, x, b):
+        nm = self.get_nm_model(x)
+        fx, df, _, _ = nm.shrinkage_operator(jac = True)
+        return fx - b, df
+
+
+    def _f_jac_inv(self, x):
+        nm = self.get_nm_model(x)
+        fx, df, _, _ = nm.shrinkage_operator(jac = True)
+        return fx, df
+
+
+    # =====================================================
+    # Functions for checking homogeneous varaince 
+    # =====================================================
+
+    def _check_homogeneous(self):
+        """
+        Check that the variance of Normal Means model is homogeneous
+        """
+        if all([isinstance(x, numbers.Number) for x in [self._sj2, self._scale, self._d]]):
+            return True
+
+        is_equal_sj2   = _check_array_equal(self._sj2)
+        is_equal_scale = _check_array_equal(self._scale)
+        is_equal_d     = _check_array_equal(self._d)
+
+        if is_equal_d and is_equal_scale and is_equal_sj2:
+            return True
+
+        return False
+
+                
+    # =====================================================
+    # Attributes
+    # =====================================================
+
     @property
     def response(self):
         if self._binvobj is None:
             self.invert_postmean()
         return self._binvobj.x
+
+    @property
+    def nm_calls(self):
+        return self._nmcalls
+
+# =========================================================
+
+
+# =====================================================
+# Some utility functions
+# =====================================================
+
+def _check_array_equal(x):
+    if isinstance(x, numbers.Number):
+        return True
+    is_equal = False
+    if isinstance(x, np.ndarray):
+        xr = np.repeat(x[0], x.shape[0])
+        is_equal = np.allclose(x, xr)
+    return is_equal
+
+
+def _get_number_or_first_array_element(x):
+    if isinstance(x, numbers.Number):
+        return x
+    if isinstance(x, np.ndarray):
+        return x[0]

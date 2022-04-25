@@ -59,4 +59,4 @@ class TestLinearRegression(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    teste.main()
+    tester.main()
