@@ -63,7 +63,7 @@ def split_optparams(x, plist, olist):
                 pnew[i] = x[idx]
                 idx    += 1
         else:
-            pnew[i] = val.copy()
+            pnew[i] = val
     return tuple(pnew)
 
 
