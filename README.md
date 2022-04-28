@@ -17,7 +17,7 @@ Theory for GradVI: [Link to Overleaf](https://www.overleaf.com/project/60d0d9301
 ### Installation
 For development, download this repository and install using `pip`:
 ```
-git clone https://github.com/banskt/gradvi.git # or use the SSH link
+git clone https://github.com/stephenslab/gradvi.git # or use the SSH link
 cd gradvi
 pip install -e .
 ```
