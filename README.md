@@ -38,6 +38,8 @@ n = 100
 p = 200
 pcausal = 20
 s2 = 1.4
+k = 10
+sk = (np.power(2.0, np.arange(k) / k) - 1)
 np.random.seed(100)
 
 X = np.random.normal(0, 1, size = n * p).reshape(n, p)
