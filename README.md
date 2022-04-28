@@ -13,10 +13,10 @@ A coordinate ascent algorithm for multiple linear regression with ASH prior is a
 <!-- Future work includes extension to other types of distributions -->
 Theory for GradVI: [Link to Overleaf](https://www.overleaf.com/project/60d0d9301e098e4dbe8e3521)
 
-
 ### Installation
 For development, download this repository and install using `pip`:
-```
+
+```bash
 git clone https://github.com/stephenslab/gradvi.git # or use the SSH link
 cd gradvi
 pip install -e .
@@ -27,8 +27,9 @@ Functions are not documented yet. Here, I show an example to get started:
 
 __Example of Linear regression__
 
-Simulate some data
-```
+Simulate some data:
+
+```python
 import numpy as np
 from gradvi.priors import Ash
 from gradvi.inference import  LinearRegression
@@ -46,8 +47,9 @@ err = np.random.normal(0, np.sqrt(s2), size = n)
 y = np.dot(X, b) + err
 ```
 
-Perform regression
-```
+Perform regression:
+
+```python
 prior = Ash(sk, scaled = True)
 gvlin = LinearRegression(debug = False, display_progress = False)
 gvlin.fit(X, y, prior)
@@ -57,7 +59,7 @@ b_hat = gvlin.coef
 
 <!--
 __Defaults__
-```
+```python
 from gradvi.inference import LinearRegression
 gvlin = LinearRegression()
 gvlin.fit(X, y)
@@ -72,7 +74,7 @@ gvglm.fit(X, y)
 ```
 
 __Linear Regression with minimization options and specified prior__
-```
+```python
 from gradvi.inference import LinearRegression, Minimizer
 from gradvi.priors import ASH
 
@@ -85,11 +87,14 @@ gvlin.fit(X, y)
 
 <!--
 ### Demonstration
+
 [Link](https://banskt.github.io/iridge-notes/2021/08/24/mrash-penalized-trend-filtering-demo.html) 
 to demonstration on simple examples of linear data and trend-filtering data.
 
 ### How to use
+
 Functions are not documented yet. Here is only a quick start.
+
 ```
 from mrashpen.inference.penalized_regression import PenalizedRegression as PLR
 plr = PLR(method = 'L-BFGS-B', optimize_w = True, optimize_s = True, is_prior_scaled = True, debug = False)
