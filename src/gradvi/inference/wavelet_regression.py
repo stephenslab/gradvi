@@ -302,13 +302,14 @@ class WaveletRegression(GradVIBase):
                 b, self._prior, s2 / self._dj, 
                 scale = s2, d = self._dj)
 
-        Pb, dPdb, dPdw, dPds2 = nm.penalty_operator(jac = True)
+        Pb, dPdb, dPdw, dPdsj2 = nm.penalty_operator(jac = True)
+        dPds2 = dPdsj2 / self._dj
     
         h     = (0.5 * rTr / s2) + np.sum(Pb)
         dhdx  = - r / s2 + np.dot(self._W.T, dPdb)
         dhdw  = np.sum(dPdw, axis = 0)
         dhda  = self._prior.wmod_grad(dhdw)
-        dhds2 = 0.
+        dhds2 = - 0.5 * rTr / (self._s2 * self._s2) + np.sum(dPds2)
         grad  = opt_utils.combine_optparams([dhdx, dhda, dhds2], self._is_opt_list)
         
         # Book-keeping

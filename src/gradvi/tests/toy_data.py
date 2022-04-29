@@ -58,4 +58,3 @@ def get_normal_means(prior, n = 100, s2 = 1.44, dj = None):
     sj2 = s2 / dj
     z   = sample_normal_means(b, sj2)
     return z, sj2, s2, dj
-

@@ -14,8 +14,13 @@ A coordinate ascent algorithm for multiple linear regression with ASH prior is a
 Theory for GradVI: [Link to Overleaf](https://www.overleaf.com/project/60d0d9301e098e4dbe8e3521)
 
 ### Installation
-For development, download this repository and install using `pip`:
 
+The software can be installed directly from github using `pip`:
+```bash
+pip install git+https://github.com/stephenslab/gradvi
+```
+
+For development, download this repository and install using the `-e` flag:
 ```bash
 git clone https://github.com/stephenslab/gradvi.git # or use the SSH link
 cd gradvi
