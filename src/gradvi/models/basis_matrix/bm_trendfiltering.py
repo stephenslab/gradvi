@@ -200,7 +200,7 @@ def center_and_scale_tfbasis(Z):
     skip = 0
     if std[0] == 0:
         # do not scale the first column
-        print ("The first column has all equal values.")
+        # print ("The first column has all equal values.")
         std[0] = 1.0
         skip = 1
     Znew = Z / std

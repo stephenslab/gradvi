@@ -5,9 +5,9 @@ Class for normal means model with Point Normal Prior
 """
 
 import numpy as np
-import functools
 import random
 import logging
+import pdb
 
 from ..utils.logs import MyLogger
 from ..utils.decorators import run_once
@@ -80,7 +80,7 @@ class NMPointNormal(NormalMeans):
             zsum = self.log_sum_exponent(logLjk[:, 1].reshape(-1, 1))
         else:
             raise ValueError("Normal Means Point Normal encountered out-of-bounds value of pi1")
-        return self.log_sum_exponent(z)
+        return zsum
 
 
 
@@ -121,10 +121,7 @@ class NMPointNormal(NormalMeans):
 
     @run_once
     def calculate_logML(self):
-        #self._logML = - 0.5 * np.log(2 * np.pi) + self.log_sum_wkLjk(self.logLjk())
-        self._logML = - 0.5 * np.log(2 * np.pi) \
-                        + np.log((1 - self._pi1) * np.exp(self.logLjk()[:, 0]) \
-                        + (self._pi1) * np.exp(self.logLjk()[:, 1]))
+        self._logML = - 0.5 * np.log(2 * np.pi) + self.log_sum_wkLjk(self.logLjk())
         return
 
 
@@ -156,11 +153,7 @@ class NMPointNormal(NormalMeans):
 
     @run_once
     def calculate_logML_deriv(self):
-        #self._logML_deriv = self.ML_deriv_over_ML_y * self._y
-        ML = np.exp(self.logML)
-        numer = (1 - self._pi1) * np.exp(self.logLjk(derive = 1)[:, 0]) \
-                  + self._pi1 * np.exp(self.logLjk(derive = 1)[:, 1])
-        self._logML_deriv = - self._y * numer / (ML * np.sqrt(2. * np.pi))
+        self._logML_deriv = self.ML_deriv_over_ML_y * self._y
         return
 
 
@@ -222,7 +215,7 @@ class NMPointNormal(NormalMeans):
         """
         logm = np.max(self.logLjk())
         t0 = np.diff(np.exp(self.logLjk() - logm))
-        self._logML_pi1deriv = t0 * np.exp(logm - self.logML.reshape(self._n, 1) - 0.5 * np.log(2 * np.pi))
+        self._logML_pi1deriv = t0 * np.exp(logm - self.logML.reshape(self._n, 1) - 0.5 * np.log(2.0 * np.pi))
         return
 
 
