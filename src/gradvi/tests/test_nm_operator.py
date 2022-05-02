@@ -45,20 +45,20 @@ class TestNMOperator(unittest.TestCase):
 
 
     def _b_deriv(self, prior, x, x_bd, otype, eps = 1e-8):
-        info_msg = f"df/db numerical differentiation for NormalMeans {otype} operator, {prior.prior_type} prior"
-        err_msg  = f"df/db not equal to numerical differentiation, for NormalMeans {otype} operator, {prior.prior_type} prior"
+        info_msg = f"df/db numerical differentiation, f = NormalMeans {otype} operator, {prior.prior_type} prior"
+        err_msg  = f"df/db not equal to numerical differentiation, f = NormalMeans {otype} operator, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
         nm_eps = NormalMeans.create(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
         x_eps  = self.operator_provider(nm_eps, otype, jac = False)
         d2 = (x_eps - x) / eps
-        np.testing.assert_allclose(x_bd, d2, atol = 1e-6, rtol = 1e-8, err_msg = err_msg)
+        np.testing.assert_allclose(x_bd, d2, atol = 1e-5, rtol = 1e-8, err_msg = err_msg)
         return
 
 
     def _w_deriv(self, prior, x, x_wd, otype, eps = 1e-8):
-        info_msg = f"df/dw numerical differentiation for NormalMeans {otype} operator, {prior.prior_type} prior"
-        err_msg  = f"df/dw not equal to numerical differentiation, for NormalMeans {otype} operator, {prior.prior_type} prior"
+        info_msg = f"df/dw numerical differentiation, f = NormalMeans {otype} operator, {prior.prior_type} prior"
+        err_msg  = f"df/dw not equal to numerical differentiation, f = NormalMeans {otype} operator, {prior.prior_type} prior"
 
         mlogger.info(info_msg)
         for i in range(prior.k):
@@ -74,8 +74,8 @@ class TestNMOperator(unittest.TestCase):
 
 
     def _s2_deriv(self, prior, x, x_s2d, otype, eps = 1e-8):
-        info_msg = f"df/dw numerical differentiation for NormalMeans {otype} operator, {prior.prior_type} prior"
-        err_msg  = f"df/db not equal to numerical differentiation, for NormalMeans {otype} operator, {prior.prior_type} prior"
+        info_msg = f"df/dw numerical differentiation, f = NormalMeans {otype} operator, {prior.prior_type} prior"
+        err_msg  = f"df/db not equal to numerical differentiation, f = NormalMeans {otype} operator, {prior.prior_type} prior"
 
 
         mlogger.info(info_msg)

@@ -188,3 +188,47 @@ def trendfiltering_tibshirani(n, k):
     H[:, :k + 1] = np.power(seq, np.arange(k+1)) / np.power(n, np.arange(k+1))
     H[k+1:, k+1:] = lower_tril_from_vector(S * kfact / npowerk)
     return H
+
+def center_and_scale_tfbasis(Z):
+    '''
+    Basis matrix Z is always 2D.
+    b is the coefficient vector
+    The first column of Z is all 1, hence it has zero standard deviation.
+    '''
+    dim  = Z.ndim
+    std  = np.std(Z, axis = 0)
+    skip = 0
+    if std[0] == 0:
+        # do not scale the first column
+        print ("The first column has all equal values.")
+        std[0] = 1.0
+        skip = 1
+    Znew = Z / std
+    colmeans = np.zeros(Z.shape[0])
+    colmeans[skip:] = np.mean(Znew, axis = 0)[skip:]
+    Znew = Znew - colmeans.reshape(1, -1)
+    #scalefactor = colmeans * std[skip:]
+    scalefactor = std
+    ### add the intercept
+    #bnew = b * std
+    #if skip == 1:
+    #    bnew[0] += np.sum(scalefactor * b[1:])
+    '''
+    alternative
+    bnew = np.dot(np.dot(np.linalg.inv(Znew), Z), b)
+    '''
+    return Znew, scalefactor, colmeans
+
+
+def trendfiltering_scaled(n, k):
+    H = trendfiltering(n, k)
+    Hs, s, m = center_and_scale_tfbasis(H)
+    return Hs
+
+def trendfiltering_inverse_scaled(n, k):
+    H = trendfiltering(n, k)
+    Hs, s, m = center_and_scale_tfbasis(H)
+    Hinv = trendfiltering_inverse(n, k)
+    Hinvs = Hinv * s.reshape(-1,1)
+    Hinvs[0, :] = 1 / n
+    return Hinvs

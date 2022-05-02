@@ -120,7 +120,7 @@ class LinearRegression(GradVIBase):
     def __init__(
         self, method = 'L-BFGS-B', obj = 'reparametrize',
         fit_intercept = True, options = None, 
-        invert_method = 'hybr', invert_options = None,
+        invert_method = None, invert_options = None,
         maxiter = 2000, display_progress = True, tol = 1e-9,
         get_elbo = False, function_call_py = True, lbfgsb_call_py = True,
         optimize_b = True, optimize_s = True, optimize_w = True,
@@ -158,7 +158,7 @@ class LinearRegression(GradVIBase):
         self.logger    = MyLogger(__name__, level = logging_level)
 
         # set options for inversion of the Posterior Means Operator
-        self._invert_method = invert_method.lower()
+        self._invert_method  = invert_method
         self._invert_options = invert_options
         if self._invert_options is None: self._invert_options = {}
         return
@@ -351,8 +351,7 @@ class LinearRegression(GradVIBase):
                 # Get inverse if using parametrized objective
                 nm = NormalMeansFromPosterior(
                         b_init, self._prior, var_init / self._dj,
-                        scale = s2_init, d = self._dj, 
-                        method = "hybr")
+                        scale = var_init, d = self._dj)
                 theta_init = nm.response
             coef_init  = b_init.copy()
 

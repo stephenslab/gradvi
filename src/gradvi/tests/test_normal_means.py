@@ -33,7 +33,7 @@ class TestNormalMeansPy(unittest.TestCase):
         return
 
 
-    def _logML_deriv(self, nm, prior, eps = 1e-8):
+    def _logML_deriv(self, nm, prior, eps = 1e-9):
         info_msg  = f"df/db numerical differentiation, f = Normal Means logML; {prior.prior_type} prior"
         err_msg = f"df/db not equal to numerical differentiation, f = Normal Means logML; {prior.prior_type} prior"
 

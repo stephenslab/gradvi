@@ -150,7 +150,7 @@ class NormalMeansFromPosterior:
 
             if not self._binvobj.success:
                 if not method == 'trisection':
-                    self.logger.error("Inversion using {method} method did not converge. Trying trisection method.")
+                    self.logger.error(f"Inversion using {method} method did not converge. Trying trisection method.")
                     self._method = 'trisection'
                     self.invert_postmean()
                 #else:

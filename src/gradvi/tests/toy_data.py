@@ -3,6 +3,7 @@ Toy data for testing
 """
 
 import numpy as np
+import collections
 
 def center_and_scale(Z):
     dim = Z.ndim
@@ -58,3 +59,41 @@ def get_normal_means(prior, n = 100, s2 = 1.44, dj = None):
     sj2 = s2 / dj
     z   = sample_normal_means(b, sj2)
     return z, sj2, s2, dj
+
+
+def sample_coefs (p, method="normal", bfix=None):
+    '''
+    Sample coefficientss from a distribution (method = normal / gamma)
+    or use a specified value for all betas:
+        bfix = const -> all betas will have beta = const
+        bfix = [a, b, c, ...] -> all betas can be specified using an array
+    Note: 
+        when sampling from the gamma distribution,
+        a random sign (+/-) will be assigned
+    '''
+    beta = np.zeros(p)
+
+    # helper function to obtain random sign (+1, -1) with equal proportion (f = 0.5)
+    def sample_sign(n, f = 0.5):
+        return np.random.choice([-1, 1], size=n, p=[f, 1 - f])
+
+    # sample beta from Gaussian(mean = 0, sd = 1)
+    if method == "normal":
+        beta = np.random.normal(size = p)
+
+    # receive fixed beta input
+    elif method == "fixed":
+        assert bfix is not None, "bfix is not specified for fixed signal"
+        if isinstance(bfix, (collections.abc.Sequence, np.ndarray)):
+            assert len(bfix) == p, "Length of input coefficient sequence is different from the number of non-zero coefficients"
+            beta = bfix
+        else:
+            beta = np.repeat(bfix, p)
+
+    # sample beta from a Gamma(40, 0.1) distribution and assign random sign
+    elif method == "gamma":
+        params = [40, 0.1]
+        beta = np.random.gamma(params[0], params[1], size = p)
+        beta = np.multiply(beta, sample_sign(p))
+
+    return beta
