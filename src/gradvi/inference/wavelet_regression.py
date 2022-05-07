@@ -39,11 +39,6 @@ class WaveletRegression(GradVIBase):
         Which method to use for the gradient descent minimization.
         Should be 'L-BFGS-B' or 'CG'.
 
-    fit_intercept : bool, default = True
-        Whether to calculate the intercept for this model. If set
-        to False, no intercept will be used in calculations
-        (i.e. data is expected to be centered).
-
     options : dict
         A dictionary of options for gradient descent minimization. 
         Values in this dict will have higher priority over initially
@@ -54,7 +49,7 @@ class WaveletRegression(GradVIBase):
     maxiter : int
         Maximum number of iterations allowed for the minimization.
 
-    display_progress: bool, default = True
+    display_progress: bool, default = False
         Whether to print summary of each iteration during the
         minimization.
 
@@ -104,15 +99,13 @@ class WaveletRegression(GradVIBase):
     """
 
     def __init__(
-        self, method = 'L-BFGS-B',
-        fit_intercept = False, options = None,
+        self, method = 'L-BFGS-B', options = None,
         invert_method = None, invert_options = None,
-        maxiter = 2000, display_progress = True, tol = 1e-9,
+        maxiter = 2000, display_progress = False, tol = 1e-9,
         function_call_py = True, lbfgsb_call_py = True,
         optimize_b = True, optimize_s = True, optimize_w = True,
-        debug = True):
+        debug = False):
 
-        self._is_intercept = fit_intercept
         self._method       = method.lower()
 
         # set default options for different minimization solvers
@@ -148,7 +141,7 @@ class WaveletRegression(GradVIBase):
         return
 
 
-    def fit(self, y, prior, W, x_init = None, s2_init = None, dj = None):
+    def fit(self, Wfwd, Wrev, y, prior, x_init = None, s2_init = None, dj = None):
         """
         Fit Wavelet model.
 
@@ -160,13 +153,11 @@ class WaveletRegression(GradVIBase):
         prior : gradvi.priors object
             Prior distribution g(w).
 
-        W : ndarray of shape (n_samples, p)
-            The Wavelet matrix. It could either be W or Winv
-            depending upon the problem (noising vs denoising) 
-            the user is trying to solve.
-            For de-noising, the user has to provide the inverse
-            wavelet. For noising, the use has to provide the
-            forward wavelet.
+        Wfwd : ndarray of shape (p, n_samples)
+            The forward Wavelet matrix, such that Wfwd . y = b
+
+        Wrev : ndarray of shape (n_samples, p)
+            The inverse Wavelet matrix, such that Wrev . b = y
 
         x_init : array-like of shape (n_samples,), optional
             Initial guess for the de-noised signal x.
@@ -176,7 +167,7 @@ class WaveletRegression(GradVIBase):
             Gaussian noise
 
         dj : ndarray, optional
-            Diagonal elements of D'D where D = inverse(W).
+            Diagonal elements of D'D where D = Wfwd.
             Often, it is more practical to provide dj instead of
             calculating the inverse.
 
@@ -191,18 +182,18 @@ class WaveletRegression(GradVIBase):
         k = prior.k
 
         # This values will not change during the optimization
-        self._W         = W
-        self._intercept = np.mean(y) if self._is_intercept else 0
-        self._y         = y - self._intercept
+        self._Wfwd      = Wfwd
+        self._Winv      = Wrev
+        self._y         = y
         self._dj        = dj
         if self._dj is None:
-            self._dj    = np.sum(np.square(np.linalg.inv(self._W)), axis = 0)
+            self._dj    = np.sum(np.square(self._Wfwd), axis = 0)
         self._prior     = prior.copy() # do not update the original prior
 
         # Initialization
-        x, s2 = self.initialize_params(x_init, s2_init)
+        b, logs2 = self.initialize_params(x_init, s2_init)
         w = self._prior.wmod_init
-        self._init_params = tuple([x, w, s2]) # immutable
+        self._init_params = tuple([b, w, logs2]) # immutable
         
         # Solver depending on the specified options:
         if self._method == 'L-BFGS-B' and self._is_lbfgsb_fortran:
@@ -233,11 +224,11 @@ class WaveletRegression(GradVIBase):
         # Bounds for optimization
         bbounds = [(None, None) for x in self._init_params[0]]
         wbounds = self._prior.bounds
-        s2bound = [(1e-8, None)]
+        logs2bound = [(None, None)]
         # bounds can be used only with L-BFGS-B.
         bounds = None
         if self._method == 'l-bfgs-b':
-            bounds = opt_utils.combine_optparams([bbounds, wbounds, s2bound],
+            bounds = opt_utils.combine_optparams([bbounds, wbounds, logs2bound],
                                                  self._is_opt_list)
         
         # keep track of the objective function, and other parameters 
@@ -258,13 +249,17 @@ class WaveletRegression(GradVIBase):
                 )
 
         # Return values
-        x, wk, s2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
+        #b, wk, logs2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
+        #x = np.dot(self._Winv, b)
+        x, wk, logs2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
+        b = np.dot(self._Wfwd, x)
+        s2 = np.exp(logs2)
         self._prior.update_wmod(wk)
         self._niter = plr_min.nit
 
         res = OptimizeResult(
-                signal = self._intercept + x,
-                b_post = np.dot(self._W, self._intercept + x),
+                signal = x,
+                b_post = b,
                 residual_var = s2,
                 prior = self._prior,
                 success = plr_min.success,
@@ -289,10 +284,15 @@ class WaveletRegression(GradVIBase):
         n = self._y.shape[0]
         k = self._prior.k
 
-        coef_init  = self._y.copy()  if x_init  is None else x_init
-        var_init   = np.var(self._y) if s2_init is None else s2_init
+        if x_init is None: x_init = self._y.copy()
+        coef = np.dot(self._Wfwd, x_init)
 
-        return coef_init, var_init
+        if s2_init is None: s2_init = np.var(self._y - x_init)
+        s2_init = max(1e-8, s2_init) # cannot be zero or negative
+        logs2 = np.log(s2_init)
+
+        #return coef, logs2
+        return x_init, logs2
 
 
     def get_wavelet_func(self, params):
@@ -301,13 +301,20 @@ class WaveletRegression(GradVIBase):
         """
         # get coefficients array b, prior parameters wk
         # and residual variance s2 from the solver
-        x, wk, s2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
+        # ===========
+        #b, wk, logs2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
+        #x = np.dot(self._Winv, b)
+        # ===========
+        x, wk, logs2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
+        b = np.dot(self._Wfwd, x)
+        # ==========
+
+        s2 = np.exp(logs2)
         self._prior.update_wmod(wk)
 
         r = self._y - x
         rTr = np.dot(r, r)
 
-        b = np.dot(self._W, x)
         nm = NormalMeansFromPosterior(
                 b, self._prior, s2 / self._dj, 
                 scale = s2, d = self._dj)
@@ -316,11 +323,14 @@ class WaveletRegression(GradVIBase):
         dPds2 = dPdsj2 / self._dj
     
         h     = (0.5 * rTr / s2) + np.sum(Pb)
-        dhdx  = - r / s2 + np.dot(self._W.T, dPdb)
+        dhdx  = - r / s2 + np.dot(self._Wfwd.T, dPdb)
+        #dhdb  = np.dot(self._Winv.T, dhdx)
         dhdw  = np.sum(dPdw, axis = 0)
         dhda  = self._prior.wmod_grad(dhdw)
-        dhds2 = - 0.5 * rTr / (s2 * s2) + np.sum(dPds2)
-        grad  = opt_utils.combine_optparams([dhdx, dhda, dhds2], self._is_opt_list)
+        #dhds2 = - 0.5 * rTr / (s2 * s2) + np.sum(dPds2)
+        dhdlogs2 = - 0.5 * rTr / s2 + np.sum(dPds2 * s2)
+        #grad  = opt_utils.combine_optparams([dhdb, dhda, dhdlogs2], self._is_opt_list)
+        grad  = opt_utils.combine_optparams([dhdx, dhda, dhdlogs2], self._is_opt_list)
         
         # Book-keeping
         self._nfev += 1
@@ -346,6 +356,7 @@ class WaveletRegression(GradVIBase):
     def residual_var(self):
         return self._res.residual_var
 
+
     @property
-    def intercept(self):
-        return self._intercept
+    def signal(self):
+        return self._res.signal

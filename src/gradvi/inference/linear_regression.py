@@ -65,7 +65,7 @@ class LinearRegression(GradVIBase):
     maxiter : int
         Maximum number of iterations allowed for the minimization.
 
-    display_progress: bool, default = True
+    display_progress: bool, default = False
         Whether to print summary of each iteration during the
         minimization.
 
@@ -121,10 +121,10 @@ class LinearRegression(GradVIBase):
         self, method = 'L-BFGS-B', obj = 'reparametrize',
         fit_intercept = True, options = None, 
         invert_method = None, invert_options = None,
-        maxiter = 2000, display_progress = True, tol = 1e-9,
+        maxiter = 2000, display_progress = False, tol = 1e-9,
         get_elbo = False, function_call_py = True, lbfgsb_call_py = True,
         optimize_b = True, optimize_s = True, optimize_w = True,
-        debug = True):
+        debug = False):
 
         self._is_intercept = fit_intercept
         self._method       = method.lower()
@@ -208,6 +208,8 @@ class LinearRegression(GradVIBase):
         # Initialization
         b, s2 = self.initialize_params(b_init, t_init, s2_init)
         w = self._prior.wmod_init
+        #logs2 = np.log(s2)
+        #self._init_params = tuple([b, w, logs2]) # immutable
         self._init_params = tuple([b, w, s2]) # immutable
         
         # Solver depending on the specified options:
@@ -225,18 +227,8 @@ class LinearRegression(GradVIBase):
         """
         Run L-BFGS-B from FORTRAN
         """
-        res = OptimizeResult(
-                b_post = f_bpost,
-                b_inv  = f_theta,
-                residual_var = f_s2,
-                prior = self._prior,
-                success = f_success,
-                status  = f_status,
-                message = f_message,
-                fun = f_obj,
-                grad = f_grad,
-                fitobj = None)
-        return res
+        raise NotImplementedError("fit_fortran is not implemented yet.")
+        return
 
 
     def fit_python(self):
@@ -258,6 +250,7 @@ class LinearRegression(GradVIBase):
         bbounds = [(None, None) for x in self._init_params[0]]
         wbounds = self._prior.bounds
         s2bound = [(1e-8, None)]
+        #s2bound = [(None, None)]
         # bounds can be used only with L-BFGS-B.
         bounds = None
         if self._method == 'l-bfgs-b':
@@ -283,6 +276,8 @@ class LinearRegression(GradVIBase):
                 )
 
         # Return values
+        #b, wk, logs2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
+        #s2 = np.exp(logs2)
         b, wk, s2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
         self._prior.update_wmod(wk)
         self._niter = plr_min.nit
@@ -385,6 +380,8 @@ class LinearRegression(GradVIBase):
         """
         # get coefficients array b, prior parameters wk
         # and residual variance s2 from the solver
+        #b, wk, logs2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
+        #s2 = np.exp(logs2)
         b, wk, s2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
         self._prior.update_wmod(wk)
 
@@ -393,7 +390,8 @@ class LinearRegression(GradVIBase):
         h     = model.objective
         dhdb  = model.bgrad
         dhdw  = model.wmod_grad
-        dhds2 = model.s2grad
+        dhds2 = model.s2grad # for s2
+        #dhds2 = model.s2grad * s2 # for log(s2)
         grad  = opt_utils.combine_optparams([dhdb, dhdw, dhds2], self._is_opt_list)
         
         # Book-keeping
@@ -411,6 +409,8 @@ class LinearRegression(GradVIBase):
 
         # Calculate ELBO if requested / only for ASH prior
         if self._is_elbo_calc:
+            #b, wk, logs2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
+            #s2 = np.exp(logs2)
             b, wk, s2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
             elbo = self.get_elbo(b, s2, self._prior)
             self._elbo_path.append(elbo)
