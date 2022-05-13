@@ -9,6 +9,7 @@ import logging
 
 from ..normal_means import NormalMeansFromPosterior
 from ..utils.logs   import MyLogger
+from ..optimize.moving_average import moving_average
 #from . import coordinate_descent_step as cd_step
 #from . import elbo as elbo_py
 
@@ -25,13 +26,20 @@ from . import opt_utils
 class WaveletRegression(GradVIBase):
     """
     Wavelet Regression minimizes the following objective function
-        || y - b ||^2 + rho(b) ...... (1)
-    given the data {y} and the wavelet matrix W and its inverse Winv.
-    Under the hood, it solves a linear regression problem,
-        || y - W.c||^2 + rho(c) ..... (2)
-    where c = Winv.b
-    Unlike linear regression, the gradient descent solver solves for b
-    in this module.
+        || y - x ||^2 + rho(W.x) ...... (1)
+    given the data {y} and the wavelet matrix W. Note the difference
+    with Linear Regression solver, where we solve for
+        || y - D.b ||^2 + rho(b) ...... (2)
+    We call W the forward Wavelet matrix, which multiplied by the 
+    signal gives the coefficients. In the above notation,
+    D is the reverse of W and is called the reverse Wavelet matrix
+    for the purpose of this documentation. We note that 
+        x := D.b
+        W.D = 1
+        W.x = W.D.b = b
+    For solving Wavelet Regression, we only need W and dj, where
+    dj is the sum of rows of D'D.
+
 
     Parameters
     ----------
@@ -104,7 +112,7 @@ class WaveletRegression(GradVIBase):
         maxiter = 2000, display_progress = False, tol = 1e-9,
         function_call_py = True, lbfgsb_call_py = True,
         optimize_b = True, optimize_s = True, optimize_w = True,
-        debug = False):
+        logscale_s = False, debug = False):
 
         self._method       = method.lower()
 
@@ -128,6 +136,7 @@ class WaveletRegression(GradVIBase):
 
         # set which parameters to optimize in the minimization solver
         self._is_opt_list = [optimize_b, optimize_w, optimize_s]
+        self._is_logscale_s = logscale_s
 
         # set debug options
         self._is_debug = debug
@@ -141,7 +150,7 @@ class WaveletRegression(GradVIBase):
         return
 
 
-    def fit(self, Wfwd, Wrev, y, prior, x_init = None, s2_init = None, dj = None):
+    def fit(self, Wfwd, y, prior, x_init = None, s2_init = None, dj = None, Wrev = None):
         """
         Fit Wavelet model.
 
@@ -156,9 +165,6 @@ class WaveletRegression(GradVIBase):
         Wfwd : ndarray of shape (p, n_samples)
             The forward Wavelet matrix, such that Wfwd . y = b
 
-        Wrev : ndarray of shape (n_samples, p)
-            The inverse Wavelet matrix, such that Wrev . b = y
-
         x_init : array-like of shape (n_samples,), optional
             Initial guess for the de-noised signal x.
 
@@ -169,7 +175,10 @@ class WaveletRegression(GradVIBase):
         dj : ndarray, optional
             Diagonal elements of D'D where D = Wfwd.
             Often, it is more practical to provide dj instead of
-            calculating the inverse.
+            providing Wfwd.
+
+        Wrev : ndarray of shape (n_samples, p)
+            The reverse Wavelet matrix, such that Wrev . b = y
 
         Returns
         -------
@@ -183,17 +192,28 @@ class WaveletRegression(GradVIBase):
 
         # This values will not change during the optimization
         self._Wfwd      = Wfwd
-        self._Winv      = Wrev
+        self._Wrev      = Wrev
         self._y         = y
         self._dj        = dj
+
+        # handle dj and Wrev
+        if self._dj is None and self._Wrev is None:
+            nrow, ncol  = self._Wfwd.shape
+            if nrow == ncol:
+                try:
+                    self._Wrev = np.linalg.inv(self._Wfwd)
+                except LinAlgErr as err:
+                    raise
+            else:
+                raise ValueError("The reverse wavelet matrix is not invertible. Please provide dj or Wfwd explicitly.")
         if self._dj is None:
-            self._dj    = np.sum(np.square(self._Wfwd), axis = 0)
+            self._dj    = np.sum(np.square(self._Wrev), axis = 0)
         self._prior     = prior.copy() # do not update the original prior
 
         # Initialization
-        b, logs2 = self.initialize_params(x_init, s2_init)
+        b, s2 = self.initialize_params(x_init, s2_init)
         w = self._prior.wmod_init
-        self._init_params = tuple([b, w, logs2]) # immutable
+        self._init_params = tuple([b, w, s2]) # immutable
         
         # Solver depending on the specified options:
         if self._method == 'L-BFGS-B' and self._is_lbfgsb_fortran:
@@ -222,13 +242,13 @@ class WaveletRegression(GradVIBase):
         k = self._prior.k
 
         # Bounds for optimization
-        bbounds = [(None, None) for x in self._init_params[0]]
+        xbounds = [(None, None) for x in self._init_params[0]]
         wbounds = self._prior.bounds
-        logs2bound = [(None, None)]
+        s2bound = [(None, None)] if self._is_logscale_s else [(1e-8, None)]
         # bounds can be used only with L-BFGS-B.
         bounds = None
         if self._method == 'l-bfgs-b':
-            bounds = opt_utils.combine_optparams([bbounds, wbounds, logs2bound],
+            bounds = opt_utils.combine_optparams([xbounds, wbounds, s2bound],
                                                  self._is_opt_list)
         
         # keep track of the objective function, and other parameters 
@@ -251,9 +271,9 @@ class WaveletRegression(GradVIBase):
         # Return values
         #b, wk, logs2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
         #x = np.dot(self._Winv, b)
-        x, wk, logs2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
+        x, wk, s2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
         b = np.dot(self._Wfwd, x)
-        s2 = np.exp(logs2)
+        if self._is_logscale_s: s2 = np.exp(s2)
         self._prior.update_wmod(wk)
         self._niter = plr_min.nit
 
@@ -284,15 +304,17 @@ class WaveletRegression(GradVIBase):
         n = self._y.shape[0]
         k = self._prior.k
 
-        if x_init is None: x_init = self._y.copy()
-        coef = np.dot(self._Wfwd, x_init)
+        if x_init is None: 
+            x_init = moving_average(self._y, n = 20)
 
-        if s2_init is None: s2_init = np.var(self._y - x_init)
+        if s2_init is None: 
+            s2_init = np.var(self._y - x_init)
+
         s2_init = max(1e-8, s2_init) # cannot be zero or negative
-        logs2 = np.log(s2_init)
-
-        #return coef, logs2
-        return x_init, logs2
+        if self._is_logscale_s:
+            return x_init, np.log(s2_init)
+        else:
+            return x_init, s2_init
 
 
     def get_wavelet_func(self, params):
@@ -302,14 +324,10 @@ class WaveletRegression(GradVIBase):
         # get coefficients array b, prior parameters wk
         # and residual variance s2 from the solver
         # ===========
-        #b, wk, logs2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
-        #x = np.dot(self._Winv, b)
-        # ===========
-        x, wk, logs2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
+        x, wk, s2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
         b = np.dot(self._Wfwd, x)
-        # ==========
 
-        s2 = np.exp(logs2)
+        if self._is_logscale_s: s2 = np.exp(s2)
         self._prior.update_wmod(wk)
 
         r = self._y - x
@@ -317,20 +335,21 @@ class WaveletRegression(GradVIBase):
 
         nm = NormalMeansFromPosterior(
                 b, self._prior, s2 / self._dj, 
-                scale = s2, d = self._dj)
+                scale = s2, d = self._dj,
+                method = self._invert_method, **self._invert_options)
 
         Pb, dPdb, dPdw, dPdsj2 = nm.penalty_operator(jac = True)
         dPds2 = dPdsj2 / self._dj
     
         h     = (0.5 * rTr / s2) + np.sum(Pb)
         dhdx  = - r / s2 + np.dot(self._Wfwd.T, dPdb)
-        #dhdb  = np.dot(self._Winv.T, dhdx)
         dhdw  = np.sum(dPdw, axis = 0)
         dhda  = self._prior.wmod_grad(dhdw)
-        #dhds2 = - 0.5 * rTr / (s2 * s2) + np.sum(dPds2)
-        dhdlogs2 = - 0.5 * rTr / s2 + np.sum(dPds2 * s2)
-        #grad  = opt_utils.combine_optparams([dhdb, dhda, dhdlogs2], self._is_opt_list)
-        grad  = opt_utils.combine_optparams([dhdx, dhda, dhdlogs2], self._is_opt_list)
+        if self._is_logscale_s:    
+            dhds2 = - 0.5 * rTr / s2 + np.sum(dPds2 * s2)
+        else:
+            dhds2 = - 0.5 * rTr / (s2 * s2) + np.sum(dPds2)
+        grad  = opt_utils.combine_optparams([dhdx, dhda, dhds2], self._is_opt_list)
         
         # Book-keeping
         self._nfev += 1
@@ -360,3 +379,8 @@ class WaveletRegression(GradVIBase):
     @property
     def signal(self):
         return self._res.signal
+
+    @property
+    def elbo(self):
+        x = self._res.fun + 0.5 * np.sum(np.log(self._dj))
+        return x

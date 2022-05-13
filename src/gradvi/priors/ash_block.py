@@ -4,7 +4,6 @@ import copy
 
 from . import Prior
 from ..normal_means.nm_ash import NMAsh
-from ..normal_means.nm_ash_scaled import NMAshScaled
 
 class Ash(Prior):
 
@@ -29,10 +28,7 @@ class Ash(Prior):
         # ================================
         # Normal Means model depends on the choice of prior.
         # ================================
-        if scaled:
-            self.normal_means = NMAshScaled
-        else:
-            self.normal_means = NMAsh
+        self.normal_means = NMAsh
         return
 
 

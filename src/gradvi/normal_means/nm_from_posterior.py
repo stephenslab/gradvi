@@ -10,12 +10,12 @@ import numpy as np
 import logging
 import numbers
 
-from . import nm_utils
 from ..optimize.root_find import vec_root
 from ..optimize.bracket import bracket_postmean
 from ..utils.exceptions import NormalMeansInversionError
 from ..utils.logs import MyLogger
 from ..utils.decorators import run_once
+from ..utils.utils import get_optional_arg
 from . import NormalMeans
 
 
@@ -27,15 +27,16 @@ class NormalMeansFromPosterior:
         self._sj2   = sj2 # variance of the normal means model (for linear model, sj2 = scale / d)
 
         # Get optional parameters from kwargs
-        d                    = nm_utils.get_optional_arg('d', None, **kwargs)
-        scale                = nm_utils.get_optional_arg('scale', None, **kwargs)
-        self._z0             = nm_utils.get_optional_arg('t0', b.copy(), **kwargs)
-        self._method         = nm_utils.get_optional_arg('method', None, **kwargs)
-        self._scale, self._d = nm_utils.guess_nm_scale(self._sj2, scale, d)
-        self._bracket        = nm_utils.get_optional_arg('bracket', None, **kwargs)
+        self._z0             = get_optional_arg('t0', b.copy(), **kwargs)
+        self._method         = get_optional_arg('method', None, **kwargs)
+        self._scale          = get_optional_arg('scale', 1.0, **kwargs)
+        self._d              = get_optional_arg('d', None, **kwargs)
+        self._bracket        = get_optional_arg('bracket', None, **kwargs)
+        if self._d is None:
+            self._d = self._scale / self._sj2
 
         # Logging
-        self._is_debug       = nm_utils.get_optional_arg('debug', False, **kwargs)
+        self._is_debug       = get_optional_arg('debug', False, **kwargs)
         logging_level  = logging.DEBUG if self._is_debug else logging.INFO
         self.logger    = MyLogger(__name__, level = logging_level)
 
