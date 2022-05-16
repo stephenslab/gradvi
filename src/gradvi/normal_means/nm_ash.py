@@ -17,14 +17,14 @@ import random
 import logging
 import numbers
 
-from ..utils.logs import MyLogger
+from ..utils.logs import CustomLogger
 from ..utils.decorators import run_once
 from ..utils.special import logsumexp
 from ..utils.utils import get_optional_arg
 
-from . import NormalMeans
+from . import NMBase
 
-class NMAsh(NormalMeans):
+class NMAsh(NMBase):
     """
     NMAsh provides the marginal log likelihood and its derivatives
     for the Normal Means model with adaptive shrinkage prior (Ash).
@@ -51,10 +51,11 @@ class NMAsh(NormalMeans):
     """
 
     def __init__(self, y, prior, sj2, **kwargs):
-        # set debug options
-        self._is_debug = kwargs['debug'] if 'debug' in kwargs.keys() else False
-        logging_level  = logging.DEBUG if self._is_debug else logging.INFO
-        self.logger    = MyLogger(__name__, level = logging_level)
+
+        # set logging
+        self._is_debug = get_optional_arg('debug', False, **kwargs)
+        self._loglevel = get_optional_arg('loglevel', None, **kwargs)
+        self.logger    = CustomLogger(__name__, is_debug = self._is_debug, level = self._loglevel)
 
         # Input
         self._y   = y

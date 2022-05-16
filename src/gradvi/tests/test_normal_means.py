@@ -3,12 +3,12 @@ import unittest
 import numpy as np
 
 from gradvi.normal_means import NormalMeans
-from gradvi.utils.logs import MyLogger
+from gradvi.utils.logs import CustomLogger
 from gradvi.utils import unittest_tester as tester
 from gradvi.tests import toy_priors
 from gradvi.tests import toy_data
 
-mlogger = MyLogger(__name__)
+mlogger = CustomLogger(__name__)
 
 class TestNormalMeansPy(unittest.TestCase):
 
@@ -23,7 +23,7 @@ class TestNormalMeansPy(unittest.TestCase):
                     n = n,
                     dj = np.square(np.random.normal(1, 0.5, size = n)) * n
                     ) 
-            nm = NormalMeans.create(self.y, prior, self.sj2, scale = self.scale, d = self.dj)
+            nm = NormalMeans(self.y, prior, self.sj2, scale = self.scale, d = self.dj)
             self._logML_deriv(nm, prior)
             self._logML_deriv2(nm, prior)
             self._logML_wderiv(nm, prior)
@@ -38,7 +38,7 @@ class TestNormalMeansPy(unittest.TestCase):
         err_msg = f"df/db not equal to numerical differentiation, f = Normal Means logML; {prior.prior_type} prior"
 
         mlogger.info(info_msg)
-        nm_eps = NormalMeans.create(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
+        nm_eps = NormalMeans(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
         d1 = nm.logML_deriv
         d2 = (nm_eps.logML - nm.logML) / eps
         np.testing.assert_allclose(d1, d2, atol = 1e-6, rtol = 1e-8, err_msg = err_msg)
@@ -50,7 +50,7 @@ class TestNormalMeansPy(unittest.TestCase):
         err_msg = f"d2f/db2 not equal to numerical differentiation, f = Normal Means logML; {prior.prior_type} prior"
 
         mlogger.info(info_msg)
-        nm_eps = NormalMeans.create(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
+        nm_eps = NormalMeans(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
         d1 = nm.logML_deriv2
         d2 = (nm_eps.logML_deriv - nm.logML_deriv) / eps
         np.testing.assert_allclose(d1, d2, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)
@@ -66,7 +66,7 @@ class TestNormalMeansPy(unittest.TestCase):
             wkeps = prior.w.copy()
             wkeps[i] += eps
             prior_eps = toy_priors.get_from_same_class(prior, wkeps)
-            nm_eps    = NormalMeans.create(self.y, prior_eps, self.sj2, scale = self.scale, d = self.dj)
+            nm_eps    = NormalMeans(self.y, prior_eps, self.sj2, scale = self.scale, d = self.dj)
             d1 = nm.logML_wderiv[:, i]
             d2 = (nm_eps.logML - nm.logML) / eps
             np.testing.assert_allclose(d1, d2, atol = 1e-6, rtol = 1e-8, err_msg = err_msg)
@@ -82,7 +82,7 @@ class TestNormalMeansPy(unittest.TestCase):
             wkeps = prior.w.copy()
             wkeps[i] += eps
             prior_eps = toy_priors.get_from_same_class(prior, wkeps)
-            nm_eps    = NormalMeans.create(self.y, prior_eps, self.sj2, scale = self.scale, d = self.dj)
+            nm_eps    = NormalMeans(self.y, prior_eps, self.sj2, scale = self.scale, d = self.dj)
             d1 = nm.logML_deriv_wderiv[:, i]
             d2 = (nm_eps.logML_deriv - nm.logML_deriv) / eps
             np.testing.assert_allclose(d1, d2, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)
@@ -95,7 +95,7 @@ class TestNormalMeansPy(unittest.TestCase):
 
         mlogger.info(info_msg)
         sj2_eps = (self.scale + eps) / self.dj
-        nm_eps = NormalMeans.create(self.y, prior, sj2_eps, scale = self.scale + eps, d = self.dj)
+        nm_eps = NormalMeans(self.y, prior, sj2_eps, scale = self.scale + eps, d = self.dj)
         d1 = nm.logML_s2deriv / self.dj
         d2 = (nm_eps.logML - nm.logML) / eps
         np.testing.assert_allclose(d1, d2, atol = 1e-6, rtol = 1e-8, err_msg = err_msg)
@@ -108,7 +108,7 @@ class TestNormalMeansPy(unittest.TestCase):
 
         mlogger.info(info_msg)
         sj2_eps = (self.scale + eps) / self.dj
-        nm_eps = NormalMeans.create(self.y, prior, sj2_eps, scale = self.scale + eps, d = self.dj)
+        nm_eps = NormalMeans(self.y, prior, sj2_eps, scale = self.scale + eps, d = self.dj)
         d1 = nm.logML_deriv_s2deriv / self.dj
         d2 = (nm_eps.logML_deriv - nm.logML_deriv) / eps
         np.testing.assert_allclose(d1, d2, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)

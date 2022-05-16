@@ -1,8 +1,8 @@
 
 import functools
-import logging
+#import logging
 
-from .logs import MyLogger
+#from .logs import CustomLogger
 
 class run_once(object):
     """
@@ -22,13 +22,10 @@ class run_once(object):
     even if some parameters of the class is updated.
     """
 
-    def __init__(self, func, debug = True):
+    def __init__(self, func):
         functools.update_wrapper(self, func)
         self.func = func
-        if debug:
-            self.logger = MyLogger(__name__)
-        else:
-            self.logger = MyLogger(__name__, level = logging.INFO)
+        #self.logger = CustomLogger(__name__)
 
 
     def __call__(self, instance, *args, **kwargs):

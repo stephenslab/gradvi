@@ -8,9 +8,9 @@ from gradvi.normal_means import NormalMeans
 from gradvi.priors import Ash
 
 from gradvi.utils import unittest_tester as tester
-from gradvi.utils.logs import MyLogger
+from gradvi.utils.logs import CustomLogger
 
-mlogger = MyLogger(__name__)
+mlogger = CustomLogger(__name__)
 
 
 def get_ash_priors():
@@ -58,7 +58,7 @@ class TestOldPLRAsh(unittest.TestCase):
             # Normal Means Model
             # =========================
             mlogger.info (f"Normal Means model for {prior.prior_type} prior should match mrashpen results")
-            nm = NormalMeans.create(b, prior, sj2, scale = s2, d = dj)
+            nm = NormalMeans(b, prior, sj2, scale = s2, d = dj)
             mb, mb_bgrad, mb_wgrad, mb_s2grad = nm.shrinkage_operator()
             lj, lj_bgrad, lj_wgrad, lj_s2grad = nm.penalty_operator()
             res = {

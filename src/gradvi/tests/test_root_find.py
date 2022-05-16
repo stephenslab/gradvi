@@ -7,12 +7,12 @@ import unittest
 import numpy as np
 
 from gradvi.optimize.root_find import vec_root
-from gradvi.utils.logs import MyLogger
+from gradvi.utils.logs import CustomLogger
 from gradvi.utils import unittest_tester as tester
 from gradvi.tests import toy_priors
 from gradvi.tests import toy_data
 
-mlogger = MyLogger(__name__)
+mlogger = CustomLogger(__name__)
 
 INVERT_METHODS = [
     'hybr',

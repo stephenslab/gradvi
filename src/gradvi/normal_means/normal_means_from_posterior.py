@@ -13,7 +13,7 @@ import numbers
 from ..optimize.root_find import vec_root
 from ..optimize.bracket import bracket_postmean
 from ..utils.exceptions import NormalMeansInversionError
-from ..utils.logs import MyLogger
+from ..utils.logs import CustomLogger
 from ..utils.decorators import run_once
 from ..utils.utils import get_optional_arg
 from . import NormalMeans
@@ -37,8 +37,7 @@ class NormalMeansFromPosterior:
 
         # Logging
         self._is_debug       = get_optional_arg('debug', False, **kwargs)
-        logging_level  = logging.DEBUG if self._is_debug else logging.INFO
-        self.logger    = MyLogger(__name__, level = logging_level)
+        self.logger    = CustomLogger(__name__, is_debug = self._is_debug)
 
         # Homogeneous and heterogeneous variance of Normal Means model
         self._is_homogeneous = self._check_homogeneous()
@@ -76,7 +75,7 @@ class NormalMeansFromPosterior:
 
 
     def get_nm_model(self, z):
-        nm = NormalMeans.create(
+        nm = NormalMeans(
                 z, self._prior, self._sj2,
                 scale = self._scale, d = self._d)
         self._nmcalls += 1

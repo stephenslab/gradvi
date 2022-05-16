@@ -4,11 +4,11 @@ import numpy as np
 
 from gradvi.models import LinearModel
 from gradvi.utils import unittest_tester as tester
-from gradvi.utils.logs import MyLogger
+from gradvi.utils.logs import CustomLogger
 from gradvi.tests import toy_priors
 from gradvi.tests import toy_data
 
-mlogger = MyLogger(__name__)
+mlogger = CustomLogger(__name__)
 
 class TestLinearModel(unittest.TestCase):
 

@@ -9,12 +9,12 @@ import random
 import logging
 import pdb
 
-from ..utils.logs import MyLogger
+from ..utils.logs import CustomLogger
 from ..utils.decorators import run_once
 
-from . import NormalMeans
+from . import NMBase
 
-class NMPointNormal(NormalMeans):
+class NMPointNormal(NMBase):
 
     def __init__(self, y, prior, sj2, **kwargs):
         """
@@ -32,7 +32,7 @@ class NMPointNormal(NormalMeans):
         if 'debug' in kwargs.keys(): debug = kwargs['debug']
         self._is_debug = debug
         logging_level  = logging.DEBUG if debug else logging.INFO
-        self.logger    = MyLogger(__name__, level = logging_level)
+        self.logger    = CustomLogger(__name__, level = logging_level)
 
         # Precalculate stuff
         self._sk2   = np.array([0, prior.w[1]]).reshape(1, 2)

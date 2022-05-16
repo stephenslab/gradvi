@@ -9,7 +9,8 @@ import logging
 
 from ..models import LinearModel
 from ..normal_means import NormalMeans, NormalMeansFromPosterior
-from ..utils.logs   import MyLogger
+from ..utils.logs   import CustomLogger
+from ..utils import project
 #from . import coordinate_descent_step as cd_step
 #from . import elbo as elbo_py
 
@@ -152,10 +153,9 @@ class LinearRegression(GradVIBase):
         # set which parameters to optimize in the minimization solver
         self._is_opt_list = [optimize_b, optimize_w, optimize_s]
 
-        # set debug options
+        # set logger for this class
         self._is_debug = debug
-        logging_level  = logging.DEBUG if debug else logging.INFO
-        self.logger    = MyLogger(__name__, level = logging_level)
+        self.logger    = CustomLogger(__name__, is_debug = self._is_debug)
 
         # set options for inversion of the Posterior Means Operator
         self._invert_method  = invert_method
@@ -296,7 +296,7 @@ class LinearRegression(GradVIBase):
                 fitobj = plr_min)
 
         # Debug logging
-        self.logger.info (f"Terminated at iteration {self._niter}.")
+        self.logger.debug(f"Terminated at iteration {self._niter}.")
         self.logger.debug(f'Number of iterations:     {self._niter}')
         self.logger.debug(f'Number of callbacks:      {self._nclbk}')
         self.logger.debug(f'Number of function calls: {self._nfev}')

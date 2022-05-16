@@ -19,7 +19,7 @@ def ash(X, y, b, sigma2, prior, dj = None, phijk = None, mujk = None, varjk = No
     btilde  = b + np.dot(X.T, r) / dj
     
     if any([x is None for x in [phijk, mujk, varjk]]):
-        nmash = NormalMeans.create(btilde, prior, sigma2 / dj, scale = sigma2, d = dj)
+        nmash = NormalMeans(btilde, prior, sigma2 / dj, scale = sigma2, d = dj)
         phijk, mujk, varjk = nmash.posterior()
     
     mujk2   = np.square(mujk)
@@ -53,7 +53,7 @@ def ash2(X, y, b, sigma2, prior, dj = None, phijk = None, mujk = None, varjk = N
     btilde  = b + np.dot(X.T, r) / dj
     
     if any([x is None for x in [phijk, mujk, varjk]]):
-        nmash = NormalMeans.create(btilde, prior, sigma2 / dj, scale = sigma2, d = dj)
+        nmash = NormalMeans(btilde, prior, sigma2 / dj, scale = sigma2, d = dj)
         phijk, mujk, varjk = nmash.posterior()
     
     mujk2   = np.square(mujk)

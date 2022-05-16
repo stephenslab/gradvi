@@ -3,7 +3,7 @@ import numpy as np
 import logging
 
 from ..utils.decorators import run_once
-from ..utils.logs import MyLogger
+from ..utils.logs import CustomLogger
 from ..normal_means import NormalMeans
 from ..normal_means import NormalMeansFromPosterior
 
@@ -96,7 +96,7 @@ class LinearModel:
         # set debug options
         self._is_debug = debug
         logging_level  = logging.DEBUG if debug else logging.INFO
-        self.logger    = MyLogger(__name__, level = logging_level)
+        self.logger    = CustomLogger(__name__, level = logging_level)
 
         # required only for ELBO calculation
         self._v2inv = v2inv
@@ -107,7 +107,7 @@ class LinearModel:
 
 
     def get_normal_means_model(self):
-        nm  = NormalMeans.create(
+        nm  = NormalMeans(
                 self._b, 
                 self._prior, 
                 self._nm_sj2, 

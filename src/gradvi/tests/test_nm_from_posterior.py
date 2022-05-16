@@ -14,12 +14,12 @@ import numpy as np
 
 from gradvi.normal_means import NormalMeans
 from gradvi.normal_means import NormalMeansFromPosterior as NMFromPost
-from gradvi.utils.logs import MyLogger
+from gradvi.utils.logs import CustomLogger
 from gradvi.utils import unittest_tester as tester
 from gradvi.tests import toy_priors
 from gradvi.tests import toy_data
 
-mlogger = MyLogger(__name__)
+mlogger = CustomLogger(__name__)
 
 INVERT_METHODS = [
     'hybr',
@@ -49,7 +49,7 @@ class TestNMFromPosterior(unittest.TestCase):
             # =================
             # the Normal Means model with z as response
             # =================
-            nm1 = NormalMeans.create(z, prior, sj2, scale = s2, d = dj)
+            nm1 = NormalMeans(z, prior, sj2, scale = s2, d = dj)
             b   = nm1.analytical_posterior_mean
             if b is not None:
                 for method in INVERT_METHODS:
@@ -67,7 +67,7 @@ class TestNMFromPosterior(unittest.TestCase):
                     # =================
                     # the Normal Means model with znew as response
                     # =================
-                    nm2  = NormalMeans.create(znew, prior, sj2, scale = s2, d = dj)
+                    nm2  = NormalMeans(znew, prior, sj2, scale = s2, d = dj)
                     bnew = nm2.shrinkage_operator(jac = False)
                     # =================
                     # Check z = znew and b = bnew
@@ -104,7 +104,7 @@ class TestNMFromPosterior(unittest.TestCase):
             info_msg  = f"f(b) should be equal to f(M(z)), NMFromPost {otype} operator, {prior.prior_type} prior"
             err_msg   = f"f(b) not equal to f(M(z)), NMFromPost {otype} operator, {prior.prior_type} prior"
             mlogger.info(info_msg)
-            nm2  = NormalMeans.create(nm.response, prior, sj2, scale = s2, d = dj)
+            nm2  = NormalMeans(nm.response, prior, sj2, scale = s2, d = dj)
             lz   = nm2.penalty_operator(jac = False)
             np.testing.assert_allclose(lz, x, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)
             # =================

@@ -8,7 +8,7 @@ from scipy import optimize as sp_optimize
 import logging
 
 from ..normal_means import NormalMeansFromPosterior
-from ..utils.logs   import MyLogger
+from ..utils.logs   import CustomLogger
 #from . import coordinate_descent_step as cd_step
 #from . import elbo as elbo_py
 
@@ -139,7 +139,7 @@ class WaveletRegression(GradVIBase):
         # set debug options
         self._is_debug = debug
         logging_level  = logging.DEBUG if debug else logging.INFO
-        self.logger    = MyLogger(__name__, level = logging_level)
+        self.logger    = CustomLogger(__name__, level = logging_level)
 
         # set options for inversion of the Posterior Means Operator
         self._invert_method = invert_method

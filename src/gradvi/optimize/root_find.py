@@ -13,7 +13,7 @@ import collections
 from scipy import optimize as sp_optimize
 from scipy import interpolate as sp_interpolate
 
-from ..utils.logs import MyLogger
+from ..utils.logs import CustomLogger
 
 # Default tolerance
 _epsilon = np.sqrt(np.finfo(float).eps)
@@ -33,7 +33,7 @@ _ITR_ERR_MSG = {
     -2  : "Error in checking convergence status",
 }
 
-mlogger = MyLogger(__name__)
+mlogger = CustomLogger(__name__)
 
 def vec_root(func, x0, args = (), method = None, jac = None,
         bracket = None, tol = None, maxiter = None, fx = None,
