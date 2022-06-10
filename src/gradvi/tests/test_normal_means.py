@@ -14,15 +14,12 @@ class TestNormalMeansPy(unittest.TestCase):
 
     def test_NM(self):
         n = 100
+        self.scale = 1.44
+        self.dj    = np.square(np.random.normal(1, 0.5, size = n)) * n
         priors = toy_priors.get_all()
         for prior in priors:
             np.random.seed(100)
-            self.y, self.sj2, self.scale, self.dj = \
-                toy_data.get_normal_means(
-                    prior, 
-                    n = n,
-                    dj = np.square(np.random.normal(1, 0.5, size = n)) * n
-                    ) 
+            self.y, self.sj2 = toy_data.get_normal_means(prior, n = n, s2 = self.scale, dj = self.dj, seed = 100)
             nm = NormalMeans(self.y, prior, self.sj2, scale = self.scale, d = self.dj)
             self._logML_deriv(nm, prior)
             self._logML_deriv2(nm, prior)

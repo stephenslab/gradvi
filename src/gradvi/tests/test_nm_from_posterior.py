@@ -45,7 +45,10 @@ class TestNMFromPosterior(unittest.TestCase):
 
         priors = toy_priors.get_all(k = 10, skbase = 10., sparsity = 0.3)
         for prior in priors:
-            z, sj2, s2, dj = toy_data.get_normal_means(prior)
+            n      = 100
+            s2     = 1.44
+            dj     = np.ones(n) * n
+            z, sj2 = toy_data.get_normal_means(prior, n = n, s2 = s2, dj = dj, seed = 100)
             # =================
             # the Normal Means model with z as response
             # =================
@@ -93,7 +96,10 @@ class TestNMFromPosterior(unittest.TestCase):
         priors = toy_priors.get_all(k = 10, skbase = 10., sparsity = 0.3)
         otype  = 'penalty'
         for prior in priors:
-            z, sj2, s2, dj = toy_data.get_normal_means(prior)
+            s2     = 1.44
+            n      = 100
+            dj     = np.ones(n) * n
+            z, sj2 = toy_data.get_normal_means(prior, n = n, s2 = s2, dj = dj, seed = 100)
             # We are not testing the inversion.
             # Let's assume z is the posterior
             nm = NMFromPost(z, prior, sj2, scale = s2, d = dj, method = 'fssi-cubic', ngrid = 500)

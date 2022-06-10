@@ -19,12 +19,27 @@ class NMBase:
         Calculate the posterior expectation of b under NM model
         using Tweedie's formula.
 
-        Returns shrinkage operator M(b)
-        Dimensions:
-            M: vector of size P
-            M_bgrad: vector of size P
-            M_wgrad: matrix of size P x K
-            M_sgrad: vector of size P
+        Parameters
+        ----------
+        jac : boolean, default True
+            Whether to return the derivatives
+
+        Returns
+        -------
+        M : ndarray of shape (n_features,)
+            M(y) - the shrinkage operator applied on the input self.y
+
+        M_bgrad : ndarray of shape (n_features,)
+            The derivative of M(y) with respect to y
+
+        M_wgrad : ndarray of shape (n_features, K)
+            The derivative of M(y) with respect to w, where w are the
+            parameters of the prior to be estimated. Note, there are
+            K unknown parameters for the prior.
+
+        M_s2grad : ndarray of shape (n_features,)
+            The derivative of M(y) with respect to sj2, where sj2 is
+            the variance of the Normal Means model. 
         """
         M  = self.y + self.yvar * self.logML_deriv
         if jac:
@@ -37,14 +52,31 @@ class NMBase:
 
     def penalty_operator(self, jac = True):
         """
-        Returns the penalty operator, defined as sum_j lambda_j = rho(M(b)) / sj^2
-        Dimensions:
-            lambdaj: vector of size P
-            l_bgrad: vector of size P
-            l_wgrad: vector of size P x K
-            l_sgrad: vector of size P 
-        Note: lambdaj to be summed outside this function for sum_j lambda_j
-              l_sgrad to be summed outside this function for sum_j d/ds2 lambda_j
+        Calculate the penalty operator, defined as 
+            sum_j L_j,   where
+            L_j = rho(M(y_j)) / s_j^2
+
+        Parameters
+        ----------
+        jac : boolean, default True
+            Whether to return the derivatives
+
+        Returns
+        -------
+        lambdaj : ndarray of shape (n_features,)
+            The penalty operator applied on the input self.y
+
+        l_bgrad : ndarray of shape (n_features,)
+            The derivative of L with respect to y
+
+        l_wgrad : ndarray of shape (n_features, K)
+            The derivative of L with respect to w, where w are the
+            parameters of the prior to be estimated. Note, there are
+            K unknown parameters for the prior.
+
+        l_s2grad : ndarray of shape (n_features,)
+            The derivative of L with respect to sj2, where sj2 is
+            the variance of the Normal Means model. 
         """
         lambdaj = - self.logML - 0.5 * self.yvar * np.square(self.logML_deriv)
         if jac:

@@ -39,6 +39,18 @@ class CustomLogger(logging.getLoggerClass()):
         self.create(name, fmt = fmt, level = level, logfile = logfile, is_handler = is_handler, is_debug = is_debug)
         return
 
+    def __repr__(self):
+        if loggers.keys():
+            m = max(map(len, list(loggers.keys()))) + 1
+            return '\n'.join([k.rjust(m) + ':' + repr(v)
+                              for k, v in loggers.items()])
+        else:
+            return self.__class__.__name__ + "()"
+
+
+    def __dir__(self):
+        return list(loggers.keys())
+
 
     def create_default_logger(self):
         self.create(project.get_name(), level = project.logging_level(),

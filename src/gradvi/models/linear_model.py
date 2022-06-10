@@ -78,7 +78,7 @@ class LinearModel:
             objtype = "reparametrize", 
             v2inv = None,
             debug = False,
-            invert_method = "hybr",
+            invert_method = "trisection",
             invert_options = {}
             ):
 

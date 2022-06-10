@@ -50,15 +50,12 @@ def sample_normal_means(mean, var):
     return y
 
 
-def get_normal_means(prior, n = 100, s2 = 1.44, dj = None):
-    np.random.seed(100)
-    #dj = np.square(np.random.normal(1, 0.5, size = n)) * n
-    if dj is None:
-        dj  = np.ones(n) * n
-    b   = prior.sample(n, seed = 200, scale = s2)
+def get_normal_means(prior, n = 100, s2 = 1., dj = 1., seed = 100):
+    np.random.seed(seed)
+    b   = prior.sample(n, seed = seed * 2, scale = s2)
     sj2 = s2 / dj
     z   = sample_normal_means(b, sj2)
-    return z, sj2, s2, dj
+    return z, sj2
 
 
 def sample_coefs (p, method="normal", bfix=None):
