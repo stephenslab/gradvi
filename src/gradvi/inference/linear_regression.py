@@ -435,4 +435,8 @@ class LinearRegression(GradVIBase):
 
     @property
     def elbo_path(self):
-        return self._elbo_path
+        if self._is_elbo_calc:
+            return self._elbo_path
+        else:
+            fdj = 0.5 * np.sum(np.log(self._dj))
+            return self._h_path + fdj
