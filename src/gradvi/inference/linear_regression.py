@@ -326,12 +326,15 @@ class LinearRegression(GradVIBase):
         n, p = self._X.shape
         k    = self._prior.k
 
-        var_init   = np.var(self._y) if s2_init is None else s2_init
+        # we want the initial variance to be less than the true variance
+        # ad-hoc division by 0.
+        # TO-DO: work on a better initialization of s2
+        var_init   = np.var(self._y) / 10. if s2_init is None else s2_init
         theta_init = np.zeros(p)
         coef_init  = np.zeros(p)
         if b_init is None:
             if t_init is not None:
-                if s2_init is None: var_init   = np.var(self._y - np.dot(self._X, t_init))
+                if s2_init is None: var_init   = np.var(self._y - np.dot(self._X, t_init)) / 10.
                 theta_init = t_init.copy()
                 if self._objtype == "direct":
                     #lm = self.get_new_model(t_init, s2_init, self._prior)
