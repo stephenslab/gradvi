@@ -41,7 +41,7 @@ class NMAsh(NMBase):
     sj2 : float / ndarray of shape (n_features,)
         The variance of the normal means model
 
-    s2 : float, optional
+    scale : float, optional
         The scale factor of the ash prior, required for `ash_scaled` prior.
         Default is s2 = 1.0
 

@@ -372,6 +372,18 @@ class LinearRegression(GradVIBase):
         return model
 
 
+    def get_res_normal_means(self):
+        # y = theta = self._res.b_inv
+        # prior 
+        # sj2 = s2 / dj = self._res.residual_var / self._dj
+        theta = self._res.b_inv
+        prior = self._res.prior
+        sj2   = self._res.residual_var / self._dj
+        opts  = {'scale': self._res.residual_var, 'd': self._dj}
+        model = NormalMeans(theta, prior, sj2, **opts)
+        return model
+
+
     def get_elbo(self, b, s2, prior):
         model = self.get_new_model(b, s2, prior, v2inv = self._v2inv)
         return model.elbo()
