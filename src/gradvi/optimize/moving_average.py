@@ -9,6 +9,7 @@ def moving_average(y, n = None, method = 'uniform_filter'):
     if n is None:
         n = int(y.shape[0] / 20)
         n = max(4, n)
+        if (n % 2 != 0): n += 1
 
     # Reflect
     k = n // 2
