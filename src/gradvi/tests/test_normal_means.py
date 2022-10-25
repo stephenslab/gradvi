@@ -38,7 +38,7 @@ class TestNormalMeansPy(unittest.TestCase):
         nm_eps = NormalMeans(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
         d1 = nm.logML_deriv
         d2 = (nm_eps.logML - nm.logML) / eps
-        np.testing.assert_allclose(d1, d2, atol = 1e-6, rtol = 1e-8, err_msg = err_msg)
+        np.testing.assert_allclose(d1, d2, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)
         return
 
 
