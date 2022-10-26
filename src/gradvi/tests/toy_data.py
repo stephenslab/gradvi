@@ -4,6 +4,10 @@ Toy data for testing
 
 import numpy as np
 import collections
+import patsy
+from gradvi.models import basis_matrix as basemat
+
+ChangepointData = collections.namedtuple('CData', ['H', 'Hinv', 'x', 'y', 'ytest', 'ytrue', 'btrue', 'bspline_bases', 'bspline_beta', 'snr'])
 
 def center_and_scale(Z):
     dim = Z.ndim
@@ -94,3 +98,84 @@ def sample_coefs (p, method="normal", bfix=None):
         beta = np.multiply(beta, sample_sign(p))
 
     return beta
+
+
+def changepoint_from_bspline (x, knots, std,
+                 degree = 0, signal = "gamma", seed = None,
+                 include_intercept = False, bfix = None,
+                 eps = 1e-8, get_bsplines = False):
+    '''
+    Generate trend-filtering data.
+
+    Parameters
+    ----------
+    x: ndarray
+        Data points
+
+    knots: ndarray
+        Location of changepoints on x
+
+    std: float
+        Standard deviation of the noise
+
+    degree: integer, default 0
+        Degree of the B-spline basis
+
+    signal: str, default 'gamma'
+        A distribution from which the coefficients are sampled
+            - 'gamma' : Gamma(40, 0.1) with random signs (-1, 1)
+            - 'normal' : Normal(0, 1)
+            - 'fixed' : provide fixed values of the coefficients,
+                        must be used with `bfix`.
+
+    seed: integer
+        Set a seed for reproducibility
+
+    include_intercept: bool, default False
+        Whether to include a basis function for intercept
+
+    bfix: ndarray
+        specify the values of the coefficients for the basis functions
+
+    Note
+    ----
+    number of bases = k + degree + 1 if include_intercept = True
+    number of bases = k + degree     if include_intercept = False
+
+    '''
+    if seed is not None: np.random.seed(seed)
+    # ------------------------------
+    n = x.shape[0]
+    # ------------------------------
+    # Generate B-spline bases given the knots and degree
+    bspline_bases = patsy.bs(x, knots = knots, degree = degree, include_intercept = include_intercept)
+    nbases = knots.shape[0] + degree + int(include_intercept)
+    assert bspline_bases.shape[1] == nbases, "Number of B-spline bases does not match the number of knots + degree + interecept"
+    # ------------------------------
+    # Generate coefficients for the bases
+    beta   = sample_coefs(nbases, method = signal, bfix = bfix)
+    # ------------------------------
+    # Generate the function without noise
+    ytrue = np.dot(bspline_bases, beta)
+    # ------------------------------
+    # Map the data to trendfiltering bases
+    # set low values of beta to zero and regenerate y
+    H     = basemat.trendfiltering_scaled(n, degree)
+    Hinv  = basemat.trendfiltering_inverse_scaled(n, degree)
+    btrue = np.dot(Hinv, ytrue)
+    btrue[np.abs(btrue) <= eps] = 0.
+    noise = np.random.normal(0, std, size = n * 2)
+    ytrue = np.dot(H, btrue)
+    y     = ytrue + noise[:n]
+    # ------------------------------
+    # Some test data?
+    ytest = ytrue + noise[n:]
+    # ------------------------------
+    # Signal to noise ratio
+    # (experimental)
+    signal = np.mean(np.square(btrue[btrue != 0]))
+    snr    = signal / np.square(std)
+    # ------------------------------
+    data  = ChangepointData(H = H, Hinv = Hinv, x = x, y = y, ytest = ytest, ytrue = ytrue, btrue = btrue,
+                            bspline_bases = bspline_bases, bspline_beta = beta, snr = snr)
+    return data

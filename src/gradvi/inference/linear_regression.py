@@ -6,6 +6,7 @@ Unified interfaces to linear regression algorithms
 import numpy as np
 from scipy import optimize as sp_optimize
 import logging
+import time
 
 from ..models import LinearModel
 from ..normal_means import NormalMeans, NormalMeansFromPosterior
@@ -265,6 +266,7 @@ class LinearRegression(GradVIBase):
         self._nfev  = 0
         self._njev  = 0
         xinit = opt_utils.combine_optparams(self._init_params, self._is_opt_list)
+        opt_start_time = time.time()
         plr_min = sp_optimize.minimize(
                 self.get_model_func,
                 xinit,
@@ -274,6 +276,7 @@ class LinearRegression(GradVIBase):
                 callback = self.callback,
                 options = self._opts
                 )
+        opt_end_time = time.time()
 
         # Return values
         #b, wk, logs2 = opt_utils.split_optparams(plr_min.x, self._init_params, self._is_opt_list)
@@ -284,16 +287,17 @@ class LinearRegression(GradVIBase):
         model = self.get_new_model(b, s2, self._prior)
 
         res = OptimizeResult(
-                b_post = model.coef,
-                b_inv  = model.coef_inv,
+                b_post  = model.coef,
+                b_inv   = model.coef_inv,
                 residual_var = s2,
-                prior = self._prior,
+                prior   = self._prior,
+                optim_time = opt_end_time - opt_start_time,
                 success = plr_min.success,
                 status  = plr_min.status,
                 message = plr_min.message,
                 fun     = plr_min.fun,
                 grad    = plr_min.jac,
-                fitobj = plr_min)
+                fitobj  = plr_min)
 
         # Debug logging
         self.logger.debug(f"Terminated at iteration {self._niter}.")

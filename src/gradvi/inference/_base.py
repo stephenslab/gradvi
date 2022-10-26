@@ -37,6 +37,9 @@ class OptimizeResult(dict):
     fitobj : object
         The optimization object
 
+    optim_time: float
+        Number of seconds required for the optimization
+
     Notes
     -----
     `OptimizeResult` may have additional attributes not listed here depending
