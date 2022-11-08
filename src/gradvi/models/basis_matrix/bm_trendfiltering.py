@@ -195,7 +195,7 @@ def center_and_scale_tfbasis(Z):
     b is the coefficient vector
     The first column of Z is all 1, hence it has zero standard deviation.
     '''
-    dim  = Z.ndim
+    #dim  = Z.ndim // always 2
     std  = np.std(Z, axis = 0)
     skip = 0
     if std[0] == 0:
@@ -203,21 +203,16 @@ def center_and_scale_tfbasis(Z):
         # print ("The first column has all equal values.")
         std[0] = 1.0
         skip = 1
+    std  *= np.sqrt(Z.shape[0])
     Znew = Z / std
     colmeans = np.zeros(Z.shape[0])
     colmeans[skip:] = np.mean(Znew, axis = 0)[skip:]
     Znew = Znew - colmeans.reshape(1, -1)
-    #scalefactor = colmeans * std[skip:]
-    scalefactor = std
-    ### add the intercept
-    #bnew = b * std
-    #if skip == 1:
-    #    bnew[0] += np.sum(scalefactor * b[1:])
     '''
     alternative
     bnew = np.dot(np.dot(np.linalg.inv(Znew), Z), b)
     '''
-    return Znew, scalefactor, colmeans
+    return Znew, std, colmeans
 
 
 def trendfiltering_scaled(n, k):
