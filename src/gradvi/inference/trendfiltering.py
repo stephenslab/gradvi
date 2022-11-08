@@ -39,6 +39,8 @@ class Trendfiltering(LinearRegression):
         # unique variables for Trendfiltering class
         self._tf_degree = degree
         self._tf_X = gvbm.trendfiltering(n, degree)
+        self._tf_fstd = None
+        self._tf_floc = None
 
         tf_Xinv = gvbm.trendfiltering_inverse(n, degree) # Xinv is only needed for initializing, not for the model.
 
@@ -48,11 +50,9 @@ class Trendfiltering(LinearRegression):
             self._X, self._tf_fstd, self._tf_floc = gvbm.center_and_scale_tfbasis(self._tf_X)
             Xinv = tf_Xinv * self._tf_fstd.reshape(-1,1)
             Xinv[0, :] = 1 / n
-            b_init = np.dot(tf_Xinv, y_init)
+            b_init = np.dot(Xinv, y_init)
         else:
             self._X = self._tf_X.copy()
-            self._tf_fscale = None
-            self._tf_floc = None
             b_init = np.dot(tf_Xinv, y_init) 
 
 
