@@ -162,6 +162,14 @@ class LinearModel:
         return
 
 
+    def Xdotv(self, v):
+        return np.dot(self._X, v)
+
+
+    def XTdotv(self, v):
+        return np.dot(self._X.T, v)
+
+
     @run_once
     def solve_reparametrize(self, jac = True):
         """
@@ -184,9 +192,11 @@ class LinearModel:
         l_s2grad  = l_sj2grad  / self._dj
 
         # Objective function
-        r = self._y - np.dot(self._X, Mb)
+        #r = self._y - np.dot(self._X, Mb)
+        r    = self._y - self.Xdotv(Mb)
         rTr  = np.sum(np.square(r))
-        rTX  = np.dot(r.T, self._X)
+        #rTX  = np.dot(r.T, self._X)
+        rTX  = self.XTdotv(r)
         obj  = (0.5 * rTr / self._s2) + np.sum(lj)
         obj += 0.5 * (self._n - self._p) * np.log(2 * np.pi * self._s2)
 
@@ -225,9 +235,11 @@ class LinearModel:
         l_s2grad  = l_sj2grad  / self._dj
 
         # Objective function
-        r = self._y - np.dot(self._X, self._b)
+        #r = self._y - np.dot(self._X, self._b)
+        r = self._y - self.Xdotv(self._b)
         rTr  = np.sum(np.square(r))
-        rTX  = np.dot(r.T, self._X)
+        #rTX  = np.dot(r.T, self._X)
+        rTX  = self.XTdotv(r)
         obj  = (0.5 * rTr / self._s2) + np.sum(lj)
         obj += 0.5 * (self._n - self._p) * np.log(2 * np.pi * self._s2)
 

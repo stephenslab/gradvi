@@ -5,7 +5,7 @@ Toy data for testing
 import numpy as np
 import collections
 import patsy
-from gradvi.models import basis_matrix as basemat
+from gradvi.models import basis_matrix as gvbm
 
 ChangepointData = collections.namedtuple('CData', ['H', 'Hinv', 'x', 'y', 'ytest', 'ytrue', 'btrue', 'bspline_bases', 'bspline_beta', 'snr'])
 
@@ -160,8 +160,13 @@ def changepoint_from_bspline (x, knots, std,
     # ------------------------------
     # Map the data to trendfiltering bases
     # set low values of beta to zero and regenerate y
-    H     = basemat.trendfiltering_scaled(n, degree)
-    Hinv  = basemat.trendfiltering_inverse_scaled(n, degree)
+    H     = gvbm.trendfiltering(n, degree)
+    Hinv  = gvbm.trendfiltering_inverse(n, degree)
+    Hs, fscale, floc = gvbm.center_and_scale_tfbasis(H)
+    Hinvs = Hinv * fscale.reshape(-1,1)
+    Hinvs[0, :] = 1 / n
+    #H     = gvbm.trendfiltering_scaled(n, degree)
+    #Hinv  = gvbm.trendfiltering_inverse_scaled(n, degree)
     btrue = np.dot(Hinv, ytrue)
     btrue[np.abs(btrue) <= eps] = 0.
     noise = np.random.normal(0, std, size = n * 2)

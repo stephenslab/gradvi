@@ -165,7 +165,7 @@ class LinearRegression(GradVIBase):
         return
 
 
-    def fit(self, X, y, prior, b_init = None, t_init = None, s2_init = None):
+    def fit(self, X, y, prior, b_init = None, t_init = None, s2_init = None, dj = None):
         """
         Fit linear model.
 
@@ -203,7 +203,7 @@ class LinearRegression(GradVIBase):
         self._X         = X
         self._intercept = np.mean(y) if self._is_intercept else 0
         self._y         = y - self._intercept
-        self._dj        = np.sum(np.square(self._X), axis = 0)
+        self._dj        = np.sum(np.square(self._X), axis = 0) if dj is None else dj
         self._prior     = prior.copy() # do not update the original prior
 
         # Initialization
