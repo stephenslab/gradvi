@@ -7,7 +7,7 @@ import collections
 import patsy
 from gradvi.models import basis_matrix as gvbm
 
-ChangepointData = collections.namedtuple('CData', ['H', 'Hinv', 'x', 'y', 'ytest', 'ytrue', 'btrue', 'bspline_bases', 'bspline_beta', 'snr'])
+ChangepointData = collections.namedtuple('CData', ['H', 'Hinv', 'x', 'y', 'ytest', 'ytrue', 'btrue', 'bspline_bases', 'bspline_beta', 'snr', 'degree'])
 
 def center_and_scale(Z):
     dim = Z.ndim
@@ -182,5 +182,5 @@ def changepoint_from_bspline (x, knots, std,
     snr    = signal / np.square(std)
     # ------------------------------
     data  = ChangepointData(H = H, Hinv = Hinv, x = x, y = y, ytest = ytest, ytrue = ytrue, btrue = btrue,
-                            bspline_bases = bspline_bases, bspline_beta = beta, snr = snr)
+                            bspline_bases = bspline_bases, bspline_beta = beta, snr = snr, degree = degree)
     return data
