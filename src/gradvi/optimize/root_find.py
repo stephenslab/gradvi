@@ -465,13 +465,15 @@ def root_fssi(func, y,
     nfev += 1
 
     if np.any(dfdx == 0):
-        raise ArithmeticError("Derivative of f(x) returns zero values.")
+        # force linear interpolation
+        interpolate = 'linear'
+        #raise ArithmeticError("Derivative of f(x) returns zero values.")
 
-    dgdy = 1 / dfdx
 
     if interpolate == 'linear':
         xr  = np.interp(y, ygrid, xgrid)
     elif interpolate == 'cubic':
+        dgdy = 1 / dfdx
         cs  = _fssi_cubic_spline(ygrid, xgrid, dgdy)
         xr  = cs(y)
 
