@@ -435,6 +435,8 @@ class LinearRegression(GradVIBase):
             self._elbo_path.append(elbo)
 
         # Debug; Yes, I entered callback.
+        if self._nclbk == 40:
+            self.logger.debug("Break now.")
         self.logger.debug(f'Callback iteration {self._nclbk}')
         return
 

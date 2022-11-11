@@ -21,6 +21,11 @@ def parse_args():
                         dest = 'test',
                         action = 'store_true',
                         help = 'Perform unit tests')
+    parser.add_argument('--testclass',
+                        dest = 'testclass',
+                        nargs='*',
+                        default=[],
+                        help = 'List of test classes to run. Default: Run all tests.')
     parser.add_argument('--version',
                         dest = 'version',
                         action = 'store_true',
@@ -48,9 +53,9 @@ def main():
     log_level = logging.DEBUG if opts.vverbose else log_level
     mlogger.set_loglevel(log_level)
     mlogger.override_global_default_loglevel(log_level)
-    if opts.test:
+    if opts.test or len(opts.testclass) > 0:
         mlogger.debug("Calling logger from main")
-        run_unittests()
+        run_unittests(test_class_names = opts.testclass)
     elif opts.version:
         print ("GradVI version {:s}".format(project.version()))
     elif opts.do_lbfgsb:

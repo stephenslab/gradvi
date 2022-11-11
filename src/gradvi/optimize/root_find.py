@@ -386,6 +386,30 @@ def _fssi_cubic_spline(x, y, dydx):
     c[3] = y[:-1]
     return sp_interpolate.PPoly(c, x)
 
+
+def _fssi_positive_monotonic_index(x):
+    """
+    Return indices such that x is positive and monotonically increasing.
+    """
+
+    # Recursive function for masking
+    def _mask_positive_monotonic(xorig, mask):
+        x  = xorig[mask]
+        dx = np.diff(x)
+        xpm  = x >= 0
+        dxpm = dx >= 0
+        dxpm = np.insert(dxpm, 0, True)
+        xmask = np.logical_and(xpm, dxpm)
+        mask[np.where(mask)] = xmask
+        return mask
+
+    xorig = x.copy()
+    mask  = np.ones_like(xorig, dtype = bool)
+    while (not np.all(np.diff(xorig[mask]) >= 0)):
+        mask = _mask_positive_monotonic(xorig, mask)
+
+    return np.where(mask)[0]
+
     
 def root_fssi(func, y, 
         args = (), interpolate = 'cubic', ngrid = 500,
@@ -427,6 +451,7 @@ def root_fssi(func, y,
         raise ValueError("FSSI interpolation method must be linear or cubic.")
 
     nfev = 0
+    force_linear_interp = False
 
     is_bound = tuple([False, False])
     if bounds is not None:
@@ -464,13 +489,22 @@ def root_fssi(func, y,
     ygrid, dfdx = func(xgrid, *args)
     nfev += 1
 
+    if not np.all(np.diff(ygrid) >= 0):
+        mlogger.warn(f"ygrid is not strictly increasing. Removing grid points.")
+        igtz  = _fssi_positive_monotonic_index(ygrid)
+        xgrid = xgrid[igtz]
+        ygrid = ygrid[igtz]
+        dfdx  = dfdx[igtz]
+
     if np.any(dfdx == 0):
         # force linear interpolation
-        interpolate = 'linear'
+        force_linear_interp = True
+        mlogger.warn(f"Derivative of f(x) returns zero values. Forcing fssi-linear.")
         #raise ArithmeticError("Derivative of f(x) returns zero values.")
 
 
-    if interpolate == 'linear':
+
+    if interpolate == 'linear' or force_linear_interp:
         xr  = np.interp(y, ygrid, xgrid)
     elif interpolate == 'cubic':
         dgdy = 1 / dfdx

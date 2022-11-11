@@ -32,6 +32,7 @@ class CustomLogger(logging.getLoggerClass()):
     global loggers
 
     def __init__(self, name, fmt = None, level = None, logfile = None, is_handler = False, is_debug = False):
+        super().__init__(project.get_name())
         # Make sure the project has a root logger
         if project.get_name() not in loggers.keys() and not name == project.get_name():
             self.create_default_logger()
@@ -75,6 +76,7 @@ class CustomLogger(logging.getLoggerClass()):
 
 
     def create(self, name, fmt = None, level = None, logfile = None, is_handler = False, is_debug = False):
+        # print ("Register logger", name, " , handler = ", is_handler)
         # Register new logger if not already present.
         # A logger is unique by name, meaning that if a logger with the name `foo` 
         # has been created, the consequent calls of `logging.getLogger("foo")` 
