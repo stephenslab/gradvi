@@ -105,7 +105,7 @@ class Trendfiltering(LinearRegression):
     # =====================================================
     @property
     def residual_var(self):
-        return self._res.residual_var * self._tf_fstd
+        return self._res.residual_var * self._tf_ystd
 
 
     @property
