@@ -16,14 +16,16 @@ class TrendfilteringModel(LinearModel):
             tf_degree = 0,
             tfbasis_matrix = None,
             tfbasis_scale_factors = (None, None),
-            scale_tfbasis = False
+            standardize_basis = False,
+            scale_basis = False
             ):
 
         super().__init__(X, y, b, s2, prior, 
             dj = dj, objtype = objtype, v2inv = v2inv, debug = debug, 
             invert_method = invert_method, invert_options = invert_options)
 
-        self._scale_tfbasis = scale_tfbasis
+        self._tf_standardize_basis = standardize_basis
+        self._tf_scale_basis = scale_basis
         self._tf_degree = tf_degree
         self._tf_X    = tfbasis_matrix
         self._tf_fstd = tfbasis_scale_factors[0]
@@ -75,14 +77,18 @@ class TrendfilteringModel(LinearModel):
 
 
     def Xdotv(self, v):
-        if self._scale_tfbasis:
+        if self._tf_standardize_basis:
             return self.Xdotv_unscaled( v / self._tf_fstd ) - np.dot( v, self._tf_floc )
+        elif self._tf_scale_basis:
+            return self.Xdotv_unscaled(v) / self._tf_fstd
         else:
             return self.Xdotv_unscaled(v)
 
 
     def XTdotv(self, v):
-        if self._scale_tfbasis:
+        if self._tf_standardize_basis:
             return self.XTdotv_unscaled(v) / self._tf_fstd - (self._tf_floc * np.sum(v))
+        elif self._tf_scale_basis:
+            return self.XTdotv_unscaled(v) / self._tf_fstd 
         else:
             return self.XTdotv_unscaled(v)

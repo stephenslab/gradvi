@@ -24,6 +24,9 @@ from ..utils.utils import get_optional_arg
 
 from . import NMBase
 
+#import warnings
+#warnings.simplefilter("error", category=RuntimeWarning)
+
 class NMAsh(NMBase):
     """
     NMAsh provides the marginal log likelihood and its derivatives
@@ -216,6 +219,10 @@ class NMAsh(NMBase):
 
     @run_once
     def calculate_logML_wderiv(self):
+        #try:
+        #    self._logML_wderiv = np.exp(- 0.5 * np.log(2 * np.pi) + self.logLjk() - self.logML.reshape(self._n, 1))
+        #except Warning:
+        #    print ("Catch runtimewarning")
         self._logML_wderiv = np.exp(- 0.5 * np.log(2 * np.pi) + self.logLjk() - self.logML.reshape(self._n, 1))
         return
 

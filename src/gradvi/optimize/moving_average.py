@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.ndimage.filters as ndif
+import scipy.ndimage as ndimg
 
 def moving_average(y, n = None, method = 'uniform_filter'):
 
@@ -37,5 +37,5 @@ def ma_cumsum(y, n):
     return x
 
 def ma_uniform_filter1d(y, n):
-    x = ndif.uniform_filter1d(y, n, mode='constant', origin=-(n//2))[:-(n-1)]
+    x = ndimg.uniform_filter1d(y, n, mode='constant', origin=-(n//2))[:-(n-1)]
     return x
