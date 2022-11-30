@@ -1,14 +1,18 @@
 # GradVI - Gradient Descent Variational Inference
 
 GradVI provides tools for Bayesian variational inference using gradient descent methods.
-The user specifies a prior and a task 
-(e.g. linear regression, GLM regression, trendfiltering),
+The user specifies a prior and a task (e.g. linear regression, trendfiltering),
 observes data and runs posterior inference.
 The goal is to learn the parameters of the corresponding variational posterior family.
 
-Currently, only adaptive shrinkage (ASH) prior has been implemented.
-A coordinate ascent algorithm for multiple linear regression with ASH prior is available here: 
-[mr.ash.alpha](https://github.com/stephenslab/mr.ash.alpha).
+Currently, two different prior distributions, namely (1) adaptive shrinkage (ASH) prior,
+and (2) point-normal prior are provided within the software.
+For any other choice, the user has to define the prior distribution following the examples
+provided within the framework.
+
+### Related software
+- [mr.ash.alpha](https://github.com/stephenslab/mr.ash.alpha) A coordinate ascent algorithm for multiple linear regression with ASH prior.
+- [mr-ash-pen](https://github.com/banskt/mr-ash-pen) A fast FORTRAN core for GradVI multiple regression using ASH prior.
 
 <!-- Future work includes extension to other types of distributions -->
 Theory for GradVI: [Link to Overleaf](https://www.overleaf.com/project/60d0d9301e098e4dbe8e3521)
