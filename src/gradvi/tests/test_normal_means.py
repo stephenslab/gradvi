@@ -23,6 +23,7 @@ class TestNormalMeansPy(unittest.TestCase):
             nm = NormalMeans(self.y, prior, self.sj2, scale = self.scale, d = self.dj)
             self._logML_deriv(nm, prior)
             self._logML_deriv2(nm, prior)
+            self._logML_deriv3(nm, prior)
             self._logML_wderiv(nm, prior)
             self._logML_deriv_wderiv(nm, prior)
             self._logML_s2deriv(nm, prior)
@@ -51,6 +52,18 @@ class TestNormalMeansPy(unittest.TestCase):
         d1 = nm.logML_deriv2
         d2 = (nm_eps.logML_deriv - nm.logML_deriv) / eps
         np.testing.assert_allclose(d1, d2, atol = 1e-4, rtol = 1e-8, err_msg = err_msg)
+        return
+
+
+    def _logML_deriv3(self, nm, prior, eps = 1e-8):
+        info_msg  = f"d3f/db3 numerical differentiation, f = Normal Means logML; {prior.prior_type} prior"
+        err_msg = f"d3f/db3 not equal to numerical differentiation, f = Normal Means logML; {prior.prior_type} prior"
+
+        mlogger.info(info_msg)
+        nm_eps = NormalMeans(self.y + eps, prior, self.sj2, scale = self.scale, d = self.dj)
+        d1 = nm.logML_deriv3
+        d2 = (nm_eps.logML_deriv2 - nm.logML_deriv2) / eps 
+        np.testing.assert_allclose(d1, d2, atol = 1e-3, rtol = 1e-8, err_msg = err_msg)
         return
 
 

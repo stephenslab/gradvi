@@ -15,7 +15,7 @@ class Trendfiltering(LinearRegression):
         get_elbo = False, function_call_py = True, lbfgsb_call_py = True,
         optimize_b = True, optimize_s = True, optimize_w = True,
         standardize_basis = False, scale_basis = False,
-        debug = False):
+        hessian_callable = None, debug = False):
 
         # intercept is controlled from this Class.
         # Hence it is set to false for Parent class
@@ -25,7 +25,7 @@ class Trendfiltering(LinearRegression):
             maxiter = maxiter, display_progress = display_progress, tol = tol,
             get_elbo = get_elbo, function_call_py = True, lbfgsb_call_py = True,
             optimize_b = optimize_b, optimize_s = optimize_s, optimize_w = optimize_w, 
-            debug = debug)
+            hessian_callable = hessian_callable, debug = debug)
 
         self._tf_standardize_basis = standardize_basis
         self._tf_standardize_y = standardize

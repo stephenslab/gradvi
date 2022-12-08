@@ -126,12 +126,13 @@ class LinearRegression(GradVIBase):
         maxiter = 2000, display_progress = False, tol = 1e-9,
         get_elbo = False, function_call_py = True, lbfgsb_call_py = True,
         optimize_b = True, optimize_s = True, optimize_w = True,
-        debug = False):
+        hessian_callable = None, debug = False):
 
         self._is_intercept = fit_intercept
         self._method       = method.lower()
         self._objtype      = obj.lower()
         self._is_elbo_calc = get_elbo
+        self._hessian_callable = hessian_callable
 
         # set default options for different minimization solvers
         if options is None:
@@ -148,6 +149,7 @@ class LinearRegression(GradVIBase):
             self._opts.setdefault('maxfun', maxiter * 10)
         elif self._method == 'cg':
             self._opts.setdefault('gtol', tol)
+
         self._is_f_fortran      = not function_call_py
         self._is_lbfgsb_fortran = not lbfgsb_call_py
 
@@ -257,7 +259,7 @@ class LinearRegression(GradVIBase):
         if self._method == 'l-bfgs-b':
             bounds = opt_utils.combine_optparams([bbounds, wbounds, s2bound],
                                                  self._is_opt_list)
-        
+
         # keep track of the objective function, and other parameters 
         # during every iteration of the solver.
         self._h_path     = list()
@@ -272,6 +274,7 @@ class LinearRegression(GradVIBase):
                 xinit,
                 method = self._method,
                 jac = True,
+                hess = self._hessian_callable,
                 bounds = bounds,
                 callback = self.callback,
                 options = self._opts

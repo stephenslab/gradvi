@@ -139,6 +139,7 @@ class NMAsh(NMBase):
         self._logLjk[0] = - 0.5 * (    tmp1 + tmp2) # N x K matrix
         self._logLjk[1] = - 0.5 * (3 * tmp1 + tmp2) # N x K matrix
         self._logLjk[2] = - 0.5 * (5 * tmp1 + tmp2) # N x K matrix
+        self._logLjk[3] = - 0.5 * (7 * tmp1 + tmp2) # N x K matrix
         return
 
 
@@ -188,10 +189,10 @@ class NMAsh(NMBase):
 
     @run_once
     def calculate_ML_deriv2_over_ML(self):
-        log_numerator   = self.log_sum_wkLjk(self.logLjk(derive = 2))
-        log_denominator = self.log_sum_wkLjk(self.logLjk())
-        self._ML_deriv2_over_ML = self.ML_deriv_over_ML_y \
-                                    + self._y * self._y * np.exp(log_numerator - log_denominator)
+        log_wkLjk0 = self.log_sum_wkLjk(self.logLjk())
+        log_wkLjk2 = self.log_sum_wkLjk(self.logLjk(derive = 2))
+        y2 = np.square(self._y)
+        self._ML_deriv2_over_ML = self.ML_deriv_over_ML_y + y2 * np.exp(log_wkLjk2 - log_wkLjk0)
         return 
 
 
@@ -204,6 +205,34 @@ class NMAsh(NMBase):
     @run_once
     def calculate_logML_deriv2(self):
         self._logML_deriv2 = self.ML_deriv2_over_ML - np.square(self.logML_deriv)
+        return
+
+
+    @property
+    def ML_deriv3_over_ML(self):
+        self.calculate_ML_deriv3_over_ML()
+        return self._ML_deriv3_over_ML
+
+
+    @run_once
+    def calculate_ML_deriv3_over_ML(self):
+        log_wkLjk0 = self.log_sum_wkLjk(self.logLjk())
+        log_wkLjk2 = self.log_sum_wkLjk(self.logLjk(derive = 2))
+        log_wkLjk3 = self.log_sum_wkLjk(self.logLjk(derive = 3))
+        y2 = np.square(self._y)
+        self._ML_deriv3_over_ML = self._y * (3.0 * np.exp(log_wkLjk2 - log_wkLjk0) - y2 * np.exp(log_wkLjk3 - log_wkLjk0))
+        return
+
+
+    @property
+    def logML_deriv3(self):
+        self.calculate_logML_deriv3()
+        return self._logML_deriv3
+
+
+    @run_once
+    def calculate_logML_deriv3(self):
+        self._logML_deriv3 = - self.logML_deriv * (3.0 * self.logML_deriv2 + np.square(self.logML_deriv)) + self.ML_deriv3_over_ML
         return
 
 

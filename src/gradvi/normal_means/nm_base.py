@@ -14,7 +14,7 @@ import numpy as np
 class NMBase:
 
 
-    def shrinkage_operator(self, jac = True):
+    def shrinkage_operator(self, jac = True, hess = False):
         """
         Calculate the posterior expectation of b under NM model
         using Tweedie's formula.
@@ -42,15 +42,20 @@ class NMBase:
             the variance of the Normal Means model. 
         """
         M  = self.y + self.yvar * self.logML_deriv
-        if jac:
+        if jac or hess:
             M_bgrad  = 1 + self.yvar * self.logML_deriv2
             M_wgrad  = self.yvar.reshape(-1, 1) * self.logML_deriv_wderiv
             M_s2grad = self.logML_deriv + self.yvar * self.logML_deriv_s2deriv
+
+            if hess:
+                M_bgrad2 = self.yvar * self.logML_deriv3
+                return M, M_bgrad, M_wgrad, M_s2grad, M_bgrad2
+
             return M, M_bgrad, M_wgrad, M_s2grad
         return M
 
 
-    def penalty_operator(self, jac = True):
+    def penalty_operator(self, jac = True, hess = False):
         """
         Calculate the penalty operator, defined as 
             sum_j L_j,   where
@@ -79,9 +84,9 @@ class NMBase:
             the variance of the Normal Means model. 
         """
         lambdaj = - self.logML - 0.5 * self.yvar * np.square(self.logML_deriv)
-        if jac:
+        if jac or hess:
             # Gradient with respect to b
-            l_bgrad = - self.logML_deriv  - self.yvar * self.logML_deriv * self.logML_deriv2
+            l_bgrad = - self.logML_deriv * ( 1 + self.yvar * self.logML_deriv2 )
 
             # Gradient with repect to w
             v2_ld_ldwd = self.yvar.reshape(-1, 1) * self.logML_deriv.reshape(-1, 1) * self.logML_deriv_wderiv
@@ -90,7 +95,12 @@ class NMBase:
 
             # Gradient with respect to s2
             v2_ld_lds2d = self.yvar * self.logML_deriv * self.logML_deriv_s2deriv
-            l_s2grad = - self.logML_s2deriv - 0.5 * np.square(self.logML_deriv) - v2_ld_lds2d 
+            l_s2grad = - self.logML_s2deriv - 0.5 * np.square(self.logML_deriv) - v2_ld_lds2d
+
+            if hess:
+                l_b2grad = - self.logML_deriv2 * (1 + self.yvar * self.logML_deriv2) - self.yvar * self.logML_deriv * self.logML_deriv3
+
+                return lambdaj, l_bgrad, l_wgrad, l_s2grad, l_b2grad
 
             return lambdaj, l_bgrad, l_wgrad, l_s2grad
 
