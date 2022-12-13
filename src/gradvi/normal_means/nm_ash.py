@@ -349,7 +349,7 @@ class NMAsh(NMBase):
         phi  = np.zeros((n, k))
         inz  = self._nonzero_widx
         zjk[:, inz] = self.logLjk()[:, inz] + np.log(self._wk[inz])
-        phi[:, inz] = np.exp(zjk - np.max(zjk, axis = 1, keepdims = True))
+        phi         = np.exp(zjk - np.max(zjk, axis = 1, keepdims = True))
         phi        /= np.sum(phi, axis = 1, keepdims = True)
         return phi, mu, var
 

@@ -124,7 +124,7 @@ class LinearRegression(GradVIBase):
         fit_intercept = True, options = None, 
         invert_method = None, invert_options = None,
         maxiter = 2000, display_progress = False, tol = 1e-9,
-        get_elbo = False, function_call_py = True, lbfgsb_call_py = True,
+        get_elbo = False, get_coef_path = False, function_call_py = True, lbfgsb_call_py = True,
         optimize_b = True, optimize_s = True, optimize_w = True,
         hessian_callable = None, debug = False):
 
@@ -132,6 +132,7 @@ class LinearRegression(GradVIBase):
         self._method       = method.lower()
         self._objtype      = obj.lower()
         self._is_elbo_calc = get_elbo
+        self._is_full_path = get_coef_path
         self._hessian_callable = hessian_callable
 
         # set default options for different minimization solvers
@@ -264,6 +265,7 @@ class LinearRegression(GradVIBase):
         # during every iteration of the solver.
         self._h_path     = list()
         self._elbo_path  = list()
+        self._coef_path  = list()
         self._nclbk = 0
         self._nfev  = 0
         self._njev  = 0
@@ -437,6 +439,11 @@ class LinearRegression(GradVIBase):
             elbo = self.get_elbo(b, s2, self._prior)
             self._elbo_path.append(elbo)
 
+        if self._is_full_path:
+            b, wk, s2 = opt_utils.split_optparams(params, self._init_params, self._is_opt_list)
+            model     = self.get_new_model(b, s2, self._prior)
+            self._coef_path.append(model.coef)
+
         # Debug; Yes, I entered callback.
         if self._nclbk == 40:
             self.logger.debug("Break now.")
@@ -464,3 +471,8 @@ class LinearRegression(GradVIBase):
         else:
             fdj = 0.5 * np.sum(np.log(self._dj))
             return self._h_path + fdj
+
+
+    @property
+    def coef_path(self):
+        return self._coef_path
