@@ -91,7 +91,10 @@ class LinearModel:
         self._dj      = self.set_xvar(dj)
         self._nm_sj2  = self._s2 / self._dj # this is the variance for the normal means model
 
-        self._n, self._p = self._X.shape
+        if self._X is not None:
+            self._n, self._p = self._X.shape
+        else:
+            self._n = self._p = self._y.shape[0]
 
         # set debug options
         self._is_debug = debug

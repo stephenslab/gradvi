@@ -42,9 +42,14 @@ class Trendfiltering(LinearRegression):
         self._tf_intercept = np.mean(y) if self._tf_standardize_y else 0.0
         self._tf_ystd = np.std(y - self._tf_intercept) if self._tf_standardize_y else 1.0
         self._tf_degree = degree
-        self._tf_X = gvbm.trendfiltering(n, degree)
+
+        # Trendfiltering inverse matrix is required if the TF matrix is scaled or standardized.
+        self._tf_X = None
         self._tf_fstd = None
         self._tf_floc = None
+        if self._tf_standardize_basis or self._tf_scale_basis:
+            self._tf_X = gvbm.trendfiltering(n, degree)
+            tf_Xinv = gvbm.trendfiltering_inverse(n, degree) # Xinv is only needed for initializing, not for the model.
 
         # scale y to mean zero and variance 1
         yscale = (y - self._tf_intercept) / self._tf_ystd
@@ -59,7 +64,6 @@ class Trendfiltering(LinearRegression):
         else:
             s2_init = s2_init / np.square(self._tf_ystd)
 
-        tf_Xinv = gvbm.trendfiltering_inverse(n, degree) # Xinv is only needed for initializing, not for the model.
 
         # The input X (and dj), and b_init depends on scaling of TF basis.
         if self._tf_standardize_basis:
@@ -68,16 +72,21 @@ class Trendfiltering(LinearRegression):
             Xinv = tf_Xinv * self._tf_fstd.reshape(-1,1)
             Xinv[0, :] = 1 / n
             b_init = np.dot(Xinv, y_init)
+            self._dj = None
         elif self._tf_scale_basis:
             # do not standardize TF basis, but scale it such that sum(dj) = N
             self._tf_fstd = np.sqrt(np.sum(np.square(self._tf_X)) / n)
             self._X = self._tf_X / self._tf_fstd
             b_init = np.dot(tf_Xinv, y_init) * self._tf_fstd
+            self._dj = None
         else:
-            self._X = self._tf_X.copy()
-            b_init = np.dot(tf_Xinv, y_init)
+            #self._X = self._tf_X.copy()
+            #b_init = np.dot(tf_Xinv, y_init)
+            self._X = None
+            b_init = gvbm.discrete_difference(y_init, self._tf_degree)
+            self._dj = gvbm.get_dj_lowmem(n, self._tf_degree)
 
-        super().fit(self._X, yscale, prior, b_init = b_init, t_init = None, s2_init = s2_init)
+        super().fit(self._X, yscale, prior, b_init = b_init, t_init = None, s2_init = s2_init, dj = self._dj)
 
         return
 

@@ -69,7 +69,10 @@ class TrendfilteringModel(LinearModel):
             X3v1 = np.cumsum(X3v1)
         XTv = X3v1[::-1]
         ## degree 0 do not need any change
-        if d == 1:
+        if d == 0:
+            # do nothing, but Python cares about indentation
+            _ = -1
+        elif d == 1:
             XTv[0] = np.sum(v)
         else:
             XTv[:d] = np.dot(self._tf_X[:, :d].T, v)

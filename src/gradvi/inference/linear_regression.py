@@ -199,8 +199,12 @@ class LinearRegression(GradVIBase):
         """
 
         # dimensions of the problem
-        n, p = X.shape
-        k    = prior.k
+        if X is not None:
+            n, p = X.shape
+        else:
+            n = y.shape[0]
+            p = n
+        k = prior.k
 
         # This values will not change during the optimization
         self._X         = X
@@ -240,8 +244,12 @@ class LinearRegression(GradVIBase):
         Fit a solver using scipy.optimize.minimize
         """
         # This values will not change during the optimization
-        n, p = self._X.shape
-        k    = self._prior.k
+        if self._X is not None:
+            n, p = self._X.shape
+        else:
+            n = self._y.shape[0]
+            p = n
+        k = self._prior.k
 
         ## Precompute v2inv for ELBO calculation when using ash prior
         self._v2inv = None
@@ -332,8 +340,12 @@ class LinearRegression(GradVIBase):
         | b0     | t0     | b0     | Minv(b0)                   |
         +--------+--------+--------+----------------------------+
         """
-        n, p = self._X.shape
-        k    = self._prior.k
+        if self._X is not None:
+            n, p = self._X.shape
+        else:
+            n = self._y.shape[0]
+            p = n
+        k = self._prior.k
 
         # we want the initial variance to be less than the true variance
         # ad-hoc division by 0.

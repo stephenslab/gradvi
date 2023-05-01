@@ -227,3 +227,26 @@ def trendfiltering_inverse_scaled(n, k):
     Hinvs = Hinv * s.reshape(-1,1)
     Hinvs[0, :] = 1 / n
     return Hinvs
+
+
+def discrete_difference(y, d):
+    ynew = y.copy()
+    for i in range(d + 1):
+        ynew[i+1:] = np.diff(ynew[i:])
+    return ynew
+
+
+def pascal_row(n, degree):
+    row = np.ones(n)
+    for i in range(degree):
+        row = np.cumsum(row)
+    return row
+
+def get_dj_lowmem(n, degree):
+    col = pascal_row(n, degree)
+    col2 = np.square(col)
+    dj = np.zeros(n)
+    dj[degree:] = np.cumsum(col2)[:n - degree][::-1]
+    for i in range(degree):
+        dj[i] = np.sum(np.square(pascal_row(n - i, i)))
+    return dj
