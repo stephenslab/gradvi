@@ -119,4 +119,6 @@ class Trendfiltering(LinearRegression):
 
     @property
     def ypred(self):
-        return np.dot(self._X, self.coef) * self._tf_ystd + self._tf_intercept
+        _model = self.get_new_model(self.coef, self.residual_var, self._prior)
+        _ypred = _model.Xdotv(self.coef) * self._tf_ystd + self._tf_intercept
+        return _ypred
