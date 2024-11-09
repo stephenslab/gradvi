@@ -38,6 +38,10 @@ def parse_args():
                         dest = 'vverbose',
                         action = 'store_true',
                         help = 'Print more information while running')
+    parser.add_argument('--linreg',
+                        dest = 'do_lbfgsb',
+                        action = 'store_true',
+                        help = 'Perform linear regression task')
     res = parser.parse_args()
     return res
 

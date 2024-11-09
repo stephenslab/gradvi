@@ -2,7 +2,7 @@
 prune */__pycache__
 global-exclude *.pyc *.pyo *.pyd *.swp *.bak *~
 include configs.ini
-include src/cpuinfo.py
-include src/system_info.py
-include src/gradvi/clibs/*
-include src/gradvi/flibs/*
+# include src/cpuinfo.py
+# include src/system_info.py
+# include src/gradvi/clibs/*
+# include src/gradvi/flibs/*
