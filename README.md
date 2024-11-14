@@ -1,7 +1,8 @@
 # GradVI - Gradient Descent Variational Inference
 
 GradVI provides tools for Bayesian variational inference using gradient descent methods.
-The user specifies a prior and a task (e.g. linear regression, trendfiltering),
+It is a modular software which provides the boilerplate for variational inference.
+The user specifies a prior family of distribution and a task (e.g. linear regression, trendfiltering),
 observes data and runs posterior inference.
 The goal is to learn the parameters of the corresponding variational posterior family.
 
@@ -17,7 +18,7 @@ provided within the framework.
 <!-- Future work includes extension to other types of distributions -->
 Theory for GradVI: [Link to Overleaf](https://www.overleaf.com/project/60d0d9301e098e4dbe8e3521)
 
-### Installation
+## Installation
 
 The software can be installed directly from github using `pip`:
 ```bash
@@ -31,8 +32,10 @@ cd gradvi
 pip install -e .
 ```
 
-### How to use
-Functions are not documented yet. Here, I show an example to get started:
+## Quick Start
+
+The software provides several classes for performing variational inference.
+Try running the following small examples that illustrates using some classes.
 
 __Example of Linear regression__
 
@@ -67,6 +70,13 @@ gvlin.fit(X, y, prior)
 
 b_hat = gvlin.coef
 ```
+
+## Credits
+
+The GradVI Python package was developed by [Saikat Banerjee](https://github.com/banskt) 
+at the [University of Chicago](https://www.uchicago.edu/),
+with contributions from [Peter Carbonetto](https://github.com/pcarbo) and 
+[Matthew Stephens](https://stephenslab.uchicago.edu/).
 
 <!--
 __Defaults__
