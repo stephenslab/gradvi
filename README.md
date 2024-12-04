@@ -11,12 +11,14 @@ and (2) point-normal prior are provided within the software.
 For any other choice, the user has to define the prior distribution following the examples
 provided within the framework.
 
+### Reference
+The theory for Gradvi is available on [arxiv](https://arxiv.org/abs/2411.14570).
+
 ### Related software
 - [mr.ash.alpha](https://github.com/stephenslab/mr.ash.alpha) A coordinate ascent algorithm for multiple linear regression with ASH prior.
 - [mr-ash-pen](https://github.com/banskt/mr-ash-pen) A fast FORTRAN core for GradVI multiple regression using ASH prior.
 
 <!-- Future work includes extension to other types of distributions -->
-Theory for GradVI: [Link to Overleaf](https://www.overleaf.com/project/60d0d9301e098e4dbe8e3521)
 
 ## Installation
 
