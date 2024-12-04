@@ -69,13 +69,17 @@ prior = Ash(sk, scaled = True)
 gvlin = LinearRegression(debug = False, display_progress = True)
 gvlin.fit(X, y, prior)
 b_hat = gvlin.coef
+```
+
+Compare the true regression coefficients against the estimated
+coefficients:
+
+```python
 matplotlib.pyplot.scatter(b,b_hat,s = 10,color = "black")
 matplotlib.pyplot.axline((0,0),slope = 1,color = "magenta",linestyle = ":")
 matplotlib.pyplot.xlabel("true")
 matplotlib.pyplot.ylabel("estimated")
 matplotlib.pyplot.show()
-
-b_hat = gvlin.coef
 ```
 
 ## Credits
