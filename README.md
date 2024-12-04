@@ -42,7 +42,8 @@ __Example of Linear regression__
 Simulate some data:
 
 ```python
-import numpy as np
+import numpy
+import matplotlib.pyplot
 from gradvi.priors import Ash
 from gradvi.inference import  LinearRegression
 
@@ -51,31 +52,38 @@ p = 200
 pcausal = 20
 s2 = 1.4
 k = 10
-sk = (np.power(2.0, np.arange(k) / k) - 1)
-np.random.seed(100)
+sk = (numpy.power(2.0, numpy.arange(k) / k) - 1)
+numpy.random.seed(100)
 
-X = np.random.normal(0, 1, size = n * p).reshape(n, p)
-b = np.zeros(p)
-b[:pcausal] = np.random.normal(0, 1, size = pcausal)
-err = np.random.normal(0, np.sqrt(s2), size = n)
-y = np.dot(X, b) + err
+X = numpy.random.normal(0, 1, size = n * p).reshape(n, p)
+b = numpy.zeros(p)
+b[:pcausal] = numpy.random.normal(0, 1, size = pcausal)
+err = numpy.random.normal(0, numpy.sqrt(s2), size = n)
+y = numpy.dot(X, b) + err
 ```
 
 Perform regression:
 
 ```python
 prior = Ash(sk, scaled = True)
-gvlin = LinearRegression(debug = False, display_progress = False)
+gvlin = LinearRegression(debug = False, display_progress = True)
 gvlin.fit(X, y, prior)
+b_hat = gvlin.coef
+matplotlib.pyplot.scatter(b,b_hat,s = 10,color = "black")
+matplotlib.pyplot.axline((0,0),slope = 1,color = "magenta",linestyle = ":")
+matplotlib.pyplot.xlabel("true")
+matplotlib.pyplot.ylabel("estimated")
+matplotlib.pyplot.show()
 
 b_hat = gvlin.coef
 ```
 
 ## Credits
 
-The GradVI Python package was developed by [Saikat Banerjee](https://github.com/banskt) 
-at the [University of Chicago](https://www.uchicago.edu/),
-with contributions from [Peter Carbonetto](https://github.com/pcarbo) and 
+The GradVI Python package was developed by
+[Saikat Banerjee](https://github.com/banskt) at the
+[University of Chicago](https://www.uchicago.edu/), with contributions
+from [Peter Carbonetto](https://github.com/pcarbo) and
 [Matthew Stephens](https://stephenslab.uchicago.edu/).
 
 <!--
